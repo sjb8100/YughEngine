@@ -312,3 +312,7 @@ platform/windows/godot_res.res
 
 # Scons progress indicator
 .scons_node_count
+
+# Ignore Steam sdk
+/modules/godotsteam/sdk/redistributable_bin/osx32
+/modules/godotsteam/sdk/public/steam
