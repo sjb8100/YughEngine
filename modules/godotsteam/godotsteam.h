@@ -881,7 +881,6 @@ protected:
 		ClassDB::bind_method("getEarliestPurchaseUnixTime", &Steam::getEarliestPurchaseUnixTime);
 		ClassDB::bind_method("isSubscribedFromFreeWeekend", &Steam::isSubscribedFromFreeWeekend);
 		ClassDB::bind_method("getDLCCount", &Steam::getDLCCount);
-		ClassDB::bind_method("getDLCDataByIndex", &Steam::getDLCDataByIndex);
 		ClassDB::bind_method("installDLC", &Steam::installDLC);
 		ClassDB::bind_method("uninstallDLC", &Steam::uninstallDLC);
 		ClassDB::bind_method("getCurrentBetaName", &Steam::getCurrentBetaName);
@@ -891,7 +890,6 @@ protected:
 		ClassDB::bind_method("getAppOwner", &Steam::getAppOwner);
 		ClassDB::bind_method("getLaunchQueryParam", &Steam::getLaunchQueryParam);
 		ClassDB::bind_method("getAppBuildId", &Steam::getAppBuildId);
-		ClassDB::bind_method("getFileDetails", &Steam::getFileDetails);
 
 		// Controllers Bind Methods /////////////////
 		ClassDB::bind_method("activateActionSet", &Steam::activateActionSet);
@@ -921,7 +919,7 @@ protected:
 		ClassDB::bind_method(D_METHOD("inviteFriend", "steamID", "connect_string"), &Steam::inviteFriend);
 		ClassDB::bind_method(D_METHOD("setPlayedWith", "steamID"), &Steam::setPlayedWith);
 		ClassDB::bind_method("getRecentPlayers", &Steam::getRecentPlayers);
-		ClassDB::bind_method(D_METHOD("getFriendAvatar", "size"), &Steam::getFriendAvatar, DEFVAL(AVATAR_MEDIUM));
+		ClassDB::bind_method(D_METHOD("getFriendAvatar", "size", "steamID"), &Steam::getFriendAvatar, DEFVAL(AVATAR_MEDIUM), DEFVAL(-1));
 		ClassDB::bind_method("getUserSteamGroups", &Steam::getUserSteamGroups);
 		ClassDB::bind_method("getUserSteamFriends", &Steam::getUserSteamFriends);
 		ClassDB::bind_method(D_METHOD("activateGameOverlay", "type"), &Steam::activateGameOverlay, DEFVAL(""));

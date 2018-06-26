@@ -466,8 +466,8 @@ void Steam::getFriendAvatar(int size, int steamID) {
 
 	int handle = -2;
 
-	// Use the user ID if stamID is invalid
-	int fetchID = (steamID < 0 ? SteamUser()->GetSteamID() : steamID);
+	// Use the user ID if steamID is invalid
+	CSteamID fetchID = (steamID < 0 ? SteamUser()->GetSteamID() : createSteamID(steamID));
 
 	switch (size) {
 		case AVATAR_SMALL: {
