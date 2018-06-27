@@ -4,7 +4,7 @@
 #include "core/io/ip.h"
 #include "core/io/ip_address.h"
 
-Steam *Steam::singleton = NULL;
+Steam *Steam::singleton = nullptr;
 
 Steam::Steam() {
 	isInitSuccess = false;
