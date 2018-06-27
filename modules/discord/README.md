@@ -1,1 +1,1 @@
-# Gamesparks integration for Godot 3  Details on compiling the gamesparks SDK, as well as getting the newest version, can be found here  https://bitbucket.org/gamesparks/gamesparks-cpp-base/src/master/ 
+# Discord integration for Godot 3
