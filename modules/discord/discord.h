@@ -25,8 +25,6 @@ public:
 		Discord_Shutdown();
 	}
 
-	//static const char *APPLICATION_ID = "461414686882005002";
-
 	// Call this to initialize Discord integration. Must be called before anything else is.
 	void InitDiscord() {
 		DiscordEventHandlers handlers;
@@ -40,38 +38,50 @@ public:
 		handlers.joinRequest = &HandleDiscordJoinRequest;
 
 		// Params are the discord ID, our DiscordEventHandlers, bAutoregister, and an optional steam appID
+		// Replace the ID with your own game's ID
 		Discord_Initialize("461414686882005002", &handlers, 1, nullptr);
 	}
 
 	// The user's current discord presence
 	DiscordRichPresence DiscordPresence;
 
+	String DiscordState;
+	String DiscordDetails;
+	String JoinSecret;
+	String SpectateSecret;
+
 	// Simply sends on the current DiscordPresence to Discord
-	void SendRichPresence(DiscordRichPresence NewPresence) {
-		DiscordRichPresence SendPresence = NewPresence;
+	void SendRichPresence() {
+		DiscordRichPresence SendPresence{};
+
+		SendPresence.state = DiscordState.utf8().get_data();
+		SendPresence.details = DiscordDetails.utf8().get_data();
+		SendPresence.joinSecret = JoinSecret.utf8().get_data();
+		SendPresence.spectateSecret = SpectateSecret.utf8().get_data();
+
 		Discord_UpdatePresence(&SendPresence);
 	}
 
 	// @param State - The user's current party status
 	void SetPresenceState(String State) {
-		DiscordPresence.state = State.utf8().get_data();
-		SendRichPresence(DiscordPresence);
+		DiscordState = State;
+		SendRichPresence();
 	}
 
 	// @param Details - What the user is currently doing
 	void SetPresenceDetails(String Details) {
-		DiscordPresence.details = Details.utf8().get_data();
-		SendRichPresence(DiscordPresence);
+		DiscordDetails = Details;
+		SendRichPresence();
 	}
 
 	void SetJoinSecret(String Secret) {
-		DiscordPresence.joinSecret = Secret.utf8().get_data();
-		SendRichPresence(DiscordPresence);
+		JoinSecret = Secret;
+		SendRichPresence();
 	}
 
 	void SetSpectateSecret(String Secret) {
-		DiscordPresence.spectateSecret = Secret.utf8().get_data();
-		SendRichPresence(DiscordPresence);
+		SpectateSecret = Secret;
+		SendRichPresence();
 	}
 
 	// Called when Discord connects and is ready
