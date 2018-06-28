@@ -21,9 +21,9 @@ public:
 	// True if this system uses cloud saves
 	bool CloudSaves;
 
-	void RunCallbacks() = 0;
+	virtual void RunCallbacks() = 0;
 
-	void WriteAchievementProgress(String Name, float Progress) = 0;
+	virtual void WriteAchievementProgress(String Name, float Progress) = 0;
 
 	// Starts the subsystem
 	// @return True if the subsystem is available on this platform
@@ -77,12 +77,13 @@ public:
 	//////////////////////////////////////////////////////////////////////////
 
 	// A Vector of all of the registered networks
-	Vector<NetSystem *> Networks;
+	List<NetSystem *> Networks;
 
 	// Used by many online systems to give feedback to the program
 	void RunCallbacks() {
-		for (NetSystem *Network : Networks)
-			Network->RunCallbacks();
+		// TODO: Figure out how to use iterators or anything here besides this
+		for (int i = 0; i < Networks.size(); i++)
+			Networks[i]->RunCallbacks();
 	}
 
 	// Creates a session from the default online subsystem.
@@ -124,8 +125,8 @@ public:
 
 	// Writes the achievement progress to all available subsystems.
 	void WriteAchievementProgress(String Name, float Progress) {
-		for (NetSystem *Network : Networks)
-			Network->WriteAchievementProgress(Name, Progress);
+		/*for (NetSystem *Network : Networks)
+			Network->WriteAchievementProgress(Name, Progress);*/
 	}
 
 	//////////////////////////////////////////////////////////////////////////
