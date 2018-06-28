@@ -4,25 +4,25 @@
 #include "discord_rpc.h"
 #include "object.h"
 #include "reference.h"
+#include "network.h"
 
 //////////////////////////////////////////////////////////////////////////
 // Discord integration for the Godot engine 3.0+
 // https://discordapp.com/developers/docs/rich-presence/how-to
 //////////////////////////////////////////////////////////////////////////
 
-class Discord : public Object {
+class Discord : public Object, public NetSystem {
 	GDCLASS(Discord, Object);
 
 public:
 	static Discord *get_singleton() { return singleton; }
 
-	Discord() {
-		singleton = this;
-		memset(&DiscordPresence, 0, sizeof(DiscordPresence));
-	}
+	Discord();
 
-	~Discord() {
-		Discord_Shutdown();
+	~Discord();
+
+	bool Initialize() override {
+		return true;
 	}
 
 	// Call this to initialize Discord integration. Must be called before anything else is.
@@ -165,10 +165,18 @@ public:
 		Discord_Respond(userID.utf8().get_data(), response);
 	}
 
+	//////////////////////////////////////////////////////////////////////////
+	// NetSystem implementation
+	//////////////////////////////////////////////////////////////////////////
+
 	// This must be called in order to sync with the Discord server.
 	// Should be run as often as possible to keep up to date.
 	void RunCallbacks() {
 		Discord_RunCallbacks();
+	}
+
+	void WriteAchievementProgress(String Name, float Progress) {
+
 	}
 
 protected:
@@ -183,7 +191,6 @@ protected:
 		ClassDB::bind_method("SetSpectateSecret", &Discord::SetSpectateSecret);
 		ClassDB::bind_method("SetJoinSecret", &Discord::SetJoinSecret);
 		ClassDB::bind_method("JoinResponse", &Discord::JoinResponse);
-
 		ClassDB::bind_method("RunCallbacks", &Discord::RunCallbacks);
 
 		ADD_SIGNAL(MethodInfo("discord_ready"));

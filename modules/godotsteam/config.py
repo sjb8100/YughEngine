@@ -3,6 +3,7 @@ def can_build(env, platform):
 
 def configure(env):
   env.Append(CPPPATH=["#modules/godotsteam/sdk/public/"])
+  env.Append(CPPPATH="#modules/network/")
 
   # Linux handling
   if env["platform"]== "x11":

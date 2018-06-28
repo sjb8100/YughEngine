@@ -7,8 +7,9 @@
 #include "object.h"
 #include "reference.h"
 #include "scene/resources/texture.h" // For avatars
+#include "network.h"
 
-class Steam : public Object {
+class Steam : public Object, public NetSystem {
 	GDCLASS(Steam, Object);
 
 public:
@@ -118,6 +119,10 @@ public:
 	static Steam *get_singleton();
 	Steam();
 	~Steam();
+
+	bool Initialize() override {
+		return true;
+	}
 
 	// Holds an avatar Image for the game to pull from. Used because
 	// we cannot figure out how to pass it back as a parameters.
@@ -857,6 +862,18 @@ private:
 	// Should be run every frame in order for the callbacks to function
 	void run_callbacks() {
 		SteamAPI_RunCallbacks();
+	}
+
+	void RunCallbacks() {
+		SteamAPI_RunCallbacks();
+	}
+
+	void WriteAchievementProgress(String Name, float Progress) {
+		// First sets the float, then sets the achievement if it's done
+		setStatFloat(Name, Progress);
+
+		if (Progress >= 100)
+			setAchievement(Name);
 	}
 
 protected:
