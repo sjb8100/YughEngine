@@ -102,7 +102,9 @@ public:
 
 	// Updates the session with new info. Examples are a new name, or password,
 	// or number of current players, and so on.
-	void UpdateSession() {}
+	void UpdateSession() {
+
+	}
 
 	//////////////////////////////////////////////////////////////////////////
 	// For getting friends, avatars, etc

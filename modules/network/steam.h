@@ -2,7 +2,6 @@
 
 #include <inttypes.h>
 #include <steam/steam_api.h>
-
 #include "dictionary.h" // Contains array.h as well
 #include "object.h"
 #include "reference.h"

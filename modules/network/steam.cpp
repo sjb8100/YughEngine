@@ -1,4 +1,4 @@
-#include "godotsteam.h"
+#include "steam.h"
 #include <steam/steam_api.h>
 
 #include "core/io/ip.h"

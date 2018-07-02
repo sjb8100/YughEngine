@@ -2,9 +2,9 @@
 
 #include "dictionary.h"
 #include "discord_rpc.h"
+#include "network.h"
 #include "object.h"
 #include "reference.h"
-#include "network.h"
 
 //////////////////////////////////////////////////////////////////////////
 // Discord integration for the Godot engine 3.0+
@@ -86,7 +86,7 @@ public:
 
 	// Called when Discord connects and is ready
 	// @param connectedUser - The user discord the game is connected to
-	void DiscordReady(const DiscordUser* connectedUser) {
+	void DiscordReady(const DiscordUser *connectedUser) {
 		emit_signal("discord_ready");
 	}
 
@@ -176,15 +176,13 @@ public:
 	}
 
 	void WriteAchievementProgress(String Name, float Progress) {
-
 	}
 
 protected:
 	static Discord *singleton;
 
 	// Binding all methods and signals
-	static void _bind_methods()
-	{
+	static void _bind_methods() {
 		ClassDB::bind_method("InitDiscord", &Discord::InitDiscord);
 		ClassDB::bind_method("SetPresenceState", &Discord::SetPresenceState);
 		ClassDB::bind_method("SetPresenceDetails", &Discord::SetPresenceDetails);
