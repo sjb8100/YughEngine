@@ -5,6 +5,7 @@
 #include "steam.h"
 #include "discord.h"
 
+
 static Network *NetworkPtr = nullptr;
 
 // Provided to access these in particular if needed
@@ -20,15 +21,15 @@ void register_network_types() {
 	NetworkPtr = memnew(Network);
 	Engine::get_singleton()->add_singleton(Engine::Singleton("Network", Network::get_singleton()));
 
-	ClassDB::register_class<Steam>();
-	SteamPtr = memnew(Steam);
-	Engine::get_singleton()->add_singleton(Engine::Singleton("Steam", Steam::get_singleton()));
+	//ClassDB::register_class<Steam>();
+	//SteamPtr = memnew(Steam);
+	//Engine::get_singleton()->add_singleton(Engine::Singleton("Steam", Steam::get_singleton()));
 
-	ClassDB::register_class<Discord>();
-	DiscordPtr = memnew(Discord);
-	Engine::get_singleton()->add_singleton(Engine::Singleton("Discord", Discord::get_singleton()));
+	//ClassDB::register_class<Discord>();
+	//DiscordPtr = memnew(Discord);
+	//Engine::get_singleton()->add_singleton(Engine::Singleton("Discord", Discord::get_singleton()));
 }
 
 void unregister_network_types(){
-
+	memdelete(NetworkPtr);
 }
