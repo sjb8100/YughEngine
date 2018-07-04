@@ -1,8 +1,7 @@
 def can_build(env, platform):
-    True
+    return True
 
 def configure(env):
-
     ### discord includes
     discordsdk = "#modules/network/discord/sdk/"
     env.Append(CPPPATH = discordsdk + "win64/include/")
@@ -25,7 +24,7 @@ def configure(env):
 
     ### Steam includes
     steamsdk = "#modules/network/steam/sdk/redistributable_bin/"
-    env.Append(CPPPATH = "#modules/godotsteam/sdk/public/")
+    env.Append(CPPPATH = "#modules/network/steam/sdk/public/")
 
     # Linux handling
     if env["platform"] == "x11":
@@ -56,3 +55,4 @@ def configure(env):
     elif env["platform"] == "osx":
         env.Append(LIBS = "steam_api")
         env.Append(LIBPATH = steamsdk + "osx32")
+    

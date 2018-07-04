@@ -6,12 +6,16 @@
 #include "object.h"
 #include "reference.h"
 #include "scene/resources/texture.h" // For avatars
+#include "scene/main/node.h"
 #include "network.h"
 
-class Steam : public Object, public NetSystem {
-	GDCLASS(Steam, Object);
+class Steam : public Node, public NetSystem {
+	GDCLASS(Steam, Node);
 
 public:
+
+	void _notification(int p_what);
+
 	enum {
 		TOP_LEFT = 0,
 		TOP_RIGHT = 1,

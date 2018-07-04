@@ -6,6 +6,15 @@
 
 Steam *Steam::singleton = nullptr;
 
+void Steam::_notification(int p_what) {
+
+	switch (p_what) {
+		case NOTIFICATION_PROCESS: {
+			RunCallbacks();
+		}
+	}
+}
+
 Steam::Steam() {
 	isInitSuccess = false;
 	singleton = this;

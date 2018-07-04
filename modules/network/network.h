@@ -38,8 +38,8 @@ public:
 // run on all subsystems that are available.
 //////////////////////////////////////////////////////////////////////////
 
-class Network : public Object {
-	GDCLASS(Network, Object);
+class Network : public Node {
+	GDCLASS(Network, Node);
 
 public:
 	static Network *get_singleton() { return singleton; }
@@ -143,8 +143,6 @@ protected:
 	static void _bind_methods() {
 		//ClassDB::bind_method("InitDiscord", &Discord::InitDiscord);
 
-		ClassDB::bind_method("RunCallbacks", &Network::RunCallbacks);
-
 		//ADD_SIGNAL(MethodInfo("discord_ready"));
 		//ADD_SIGNAL(MethodInfo("discord_error", PropertyInfo(Variant::INT, "errcode"), PropertyInfo(Variant::STRING, "message")));
 
@@ -153,4 +151,6 @@ protected:
 		//// Bindings for the constants defined by Discord
 		//BIND_CONSTANT(DISCORD_REPLY_NO);
 	}
+
+	void _notification(int p_what);
 };

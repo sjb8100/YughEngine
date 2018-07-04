@@ -4,6 +4,7 @@
 #include "discord_rpc.h"
 #include "network.h"
 #include "object.h"
+#include "scene/main/node.h"
 #include "reference.h"
 
 //////////////////////////////////////////////////////////////////////////
@@ -11,14 +12,13 @@
 // https://discordapp.com/developers/docs/rich-presence/how-to
 //////////////////////////////////////////////////////////////////////////
 
-class Discord : public Object, public NetSystem {
-	GDCLASS(Discord, Object);
+class Discord : public Node, public NetSystem {
+	GDCLASS(Discord, Node);
 
 public:
 	static Discord *get_singleton() { return singleton; }
 
 	Discord();
-
 	~Discord();
 
 	bool Initialize() override {
