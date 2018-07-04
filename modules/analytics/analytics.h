@@ -55,7 +55,7 @@ public:
 //////////////////////////////////////////////////////////////////////////
 
 class Analytics : public Object {
-	GDCLASS(Network, Object);
+	GDCLASS(Analytics, Object);
 
 public:
 	static Analytics *get_singleton() { return singleton; }

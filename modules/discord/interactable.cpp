@@ -1,7 +1,7 @@
 // odplot productions is a trademarked name. Project Yugh is a copyrighted property. This code, however, is free to be copy and extended as you see fit.
 
-#include "interactable.h"
 #include "core/math/math_funcs.h"
+#include "interactable.h"
 
 // Sets default values for this component's properties
 Interactable::Interactable() {
@@ -19,46 +19,56 @@ Interactable::Interactable() {
 
 	Nulled = false;
 
-	RevSpeed = 1;
+	SetRevSpeed(1);
 	RevDeg = 1;
 }
 
-void Interactable::TickComponent(float DeltaTime) {
-	switch (InteractMethod) {
-		case InteractMethod::HOLD:
-			if (IsHolding) {
-				HoldTime += DeltaTime * RevSpeed;
+void Interactable::_notification(int p_what) {
 
-				if (HoldTime >= TimeToInteract) {
-					ExecInteract(false);
+	switch (p_what) {
 
-					if (TimeToInteract > 0)
-						IsHolding = false;
+		case NOTIFICATION_PROCESS: {
+			float DeltaTime = get_process_delta_time();
 
-					HoldTime = 0;
-				}
-			} else {
-				HoldTime -= DeltaTime * RevDeg;
+			switch (InteractType) {
+				case InteractMethod::INTERACT_METHOD_HOLD:
+					if (IsHolding) {
+						HoldTime = HoldTime + DeltaTime * RevSpeed;
 
-				// TODO: Anything wrong with this clamp?
-				HoldTime = CLAMP(HoldTime, 0.f, TimeToInteract);
+						if (HoldTime >= TimeToInteract) {
+							ExecInteract(false);
+
+							if (TimeToInteract > 0)
+								IsHolding = false;
+
+							HoldTime = 0;
+						}
+					} else {
+						HoldTime = HoldTime - DeltaTime * RevDeg;
+
+						// TODO: Anything wrong with this clamp?
+						HoldTime = CLAMP(HoldTime, 0.f, TimeToInteract);
+					}
+
+					// Update the SKMesh animation position
+					if (AnimPlayer)
+						AnimPlayer->seek(HoldTime / TimeToInteract, true);
+
+					break;
+
+				case InteractMethod::INTERACT_METHOD_TAP:
+
+					TapAmount = TapAmount - TapDeg * DeltaTime;
+
+					if (TapAmount <= 0) {
+						IsTapping = false;
+					}
+
+					break;
 			}
 
-			// Update the SKMesh animation position
-			if (AnimPlayer)
-				AnimPlayer->seek(HoldTime / TimeToInteract, true);
+		} break;
 
-			break;
-
-		case InteractMethod::TAP:
-
-			TapAmount -= TapDeg * DeltaTime;
-
-			if (TapAmount <= 0) {
-				IsTapping = false;
-			}
-
-			break;
 	}
 }
 
@@ -118,19 +128,19 @@ void Interactable::TickComponent(float DeltaTime) {
 //}
 
 bool Interactable::Playable() {
-	switch (this->WaitType) {
-		case InteractWait::NEITHER:
+	switch (WaitType) {
+		case InteractWait::INTERACT_WAIT_NEITHER:
 			return true;
 
-		case InteractWait::ANIMATION_ONLY:
+		case InteractWait::INTERACT_WAIT_ANIMATION_ONLY:
 			if (this->FinishedAnimation)
 				return true;
 
-		case InteractWait::AUDIO_ONLY:
+		case InteractWait::INTERACT_WAIT_AUDIO_ONLY:
 			if (this->FinishedAudio)
 				return true;
 
-		case InteractWait::BOTH:
+		case InteractWait::INTERACT_WAIT_BOTH:
 			if (this->FinishedAudio && this->FinishedAnimation)
 				return true;
 	}
@@ -148,7 +158,7 @@ void Interactable::TripFlags() {
 	FinishedAnimation = false;
 	FinishedAudio = false;
 
-	if (this->WaitType != InteractWait::NEITHER)
+	if (WaitType != InteractWait::INTERACT_WAIT_NEITHER)
 		CanInteract = false;
 }
 
@@ -205,7 +215,7 @@ void Interactable::FinishInteract() {
 			AnimPlayer->stop();
 
 		//if (NulledSound)
-			//UGameplayStatics::SpawnSoundAtLocation(this, NulledSound, this->GetComponentLocation());
+		//UGameplayStatics::SpawnSoundAtLocation(this, NulledSound, this->GetComponentLocation());
 	} else
 		ExecInteract(false);
 }

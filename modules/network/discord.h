@@ -38,6 +38,7 @@ public:
 		handlers.joinRequest = &HandleDiscordJoinRequest;
 
 		// Params are the discord ID, our DiscordEventHandlers, bAutoregister, and an optional steam appID
+		// The steam appID should be a string like "1234", and allows Discord to launch the game via steam
 		// Replace the ID with your own game's ID
 		Discord_Initialize("461414686882005002", &handlers, 1, nullptr);
 	}

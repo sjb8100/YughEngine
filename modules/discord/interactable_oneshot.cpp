@@ -4,9 +4,9 @@
 
 void InteractableOneshot::ExecInteract(bool SilentExec) {
 	if (!Nulled)
-		ApplyAnimAndAudio(PlayAnim, PlaySound);
+		ApplyAnimAndAudio(GetPlayAnim(), GetPlaySound());
 }
 
 void InteractableOneshot::ShortCircuitInteract() {
-	ApplyAnimAndAudio(PlayAnim, PlaySound);
+	ApplyAnimAndAudio(GetPlayAnim(), GetPlaySound());
 }

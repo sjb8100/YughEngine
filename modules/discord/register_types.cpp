@@ -3,6 +3,10 @@
 #include "engine.h"
 #include "timekeeper.h"
 #include "damageable.h"
+#include "interactable.h"
+#include "interactable_toggle.h"
+#include "interactable_oneshot.h"
+#include "lock.h"
 
 void register_discord_types() {
 	// Inculde new CPP files here to "register" them with ClassDB::register_class<CLASS>();
@@ -10,6 +14,10 @@ void register_discord_types() {
 
 	ClassDB::register_class<TimeKeeper>();
 	ClassDB::register_class<Damageable>();
+	ClassDB::register_class<Interactable>();
+	ClassDB::register_class<InteractableOneshot>();
+	ClassDB::register_class<InteractableToggle>();
+	ClassDB::register_class<Lock>();
 }
 
 void unregister_discord_types(){

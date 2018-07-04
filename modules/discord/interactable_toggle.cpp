@@ -25,14 +25,14 @@ void InteractableToggle::ResumeAnimation() {
 }
 
 void InteractableToggle::ShortCircuitToggle(bool Toggle) {
-	Toggled = !Toggle;
+	SetToggled(!Toggle);
 
 	ExecInteract(false);
 }
 
 void InteractableToggle::ExecInteract(bool SilentExec) {
 	// Set the opposite toggle
-	Toggled = !Toggled;
+	SetToggled(!GetToggled());
 
 	// Broadcast a toggle interact
 
@@ -43,10 +43,10 @@ void InteractableToggle::ExecInteract(bool SilentExec) {
 		// Handle audio
 
 		if (AnimPlayer) {
-			Ref<Animation> UseMontage = Toggled || ForwardBackAnim ? AnimUntoggle : AnimToggle;
+			Ref<Animation> UseMontage = GetToggled() || GetForwardBackAnim() ? AnimUntoggle : AnimToggle;
 
 			AnimPlayer->add_animation("toggle_interact", AnimToggle);
-			float PlayRate = !Toggled && ForwardBackAnim ? -1 : 1;
+			float PlayRate = !GetToggled() && GetForwardBackAnim() ? -1 : 1;
 			AnimPlayer->play("toggle_interact", -1, PlayRate, PlayRate == -1);
 			AnimPlayer->connect("animation_finished", this, "finish_animation");
 			//SKMesh->GetAnimInstance()->OnMontageEnded.AddDynamic(this, &UInteractableComponent::FinishAnimation);
