@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  resource_importer_theora.h                                           */
+/*  stream_peer_gdnative.h                                               */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -28,31 +28,34 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#ifndef RESOURCEIMPORTEROGGTHEORA_H
-#define RESOURCEIMPORTEROGGTHEORA_H
+#ifndef STREAM_PEER_GDNATIVE_H
+#define STREAM_PEER_GDNATIVE_H
 
-#include "video_stream_theora.h"
+#include "core/io/stream_peer.h"
+#include "modules/gdnative/gdnative.h"
+#include "modules/gdnative/include/net/godot_net.h"
 
-#include "core/io/resource_import.h"
+class StreamPeerGDNative : public StreamPeer {
 
-class ResourceImporterTheora : public ResourceImporter {
-	GDCLASS(ResourceImporterTheora, ResourceImporter)
+	GDCLASS(StreamPeerGDNative, StreamPeer);
+
+protected:
+	static void _bind_methods();
+	godot_net_stream_peer *interface;
+
 public:
-	virtual String get_importer_name() const;
-	virtual String get_visible_name() const;
-	virtual void get_recognized_extensions(List<String> *p_extensions) const;
-	virtual String get_save_extension() const;
-	virtual String get_resource_type() const;
+	StreamPeerGDNative();
+	~StreamPeerGDNative();
 
-	virtual int get_preset_count() const;
-	virtual String get_preset_name(int p_idx) const;
+	/* Sets the interface implementation from GDNative */
+	void set_native_stream_peer(godot_net_stream_peer *p_interface);
 
-	virtual void get_import_options(List<ImportOption> *r_options, int p_preset = 0) const;
-	virtual bool get_option_visibility(const String &p_option, const Map<StringName, Variant> &p_options) const;
-
-	virtual Error import(const String &p_source_file, const String &p_save_path, const Map<StringName, Variant> &p_options, List<String> *r_platform_variants, List<String> *r_gen_files = NULL);
-
-	ResourceImporterTheora();
+	/* Specific to StreamPeer */
+	Error put_data(const uint8_t *p_data, int p_bytes);
+	Error put_partial_data(const uint8_t *p_data, int p_bytes, int &r_sent);
+	Error get_data(uint8_t *p_buffer, int p_bytes);
+	Error get_partial_data(uint8_t *p_buffer, int p_bytes, int &r_received);
+	int get_available_bytes() const;
 };
 
-#endif // RESOURCEIMPORTEROGGTHEORA_H
+#endif // STREAM_PEER_GDNATIVE_H

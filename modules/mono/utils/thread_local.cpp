@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  resource_importer_theora.cpp                                         */
+/*  thread_local.cpp                                                     */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -28,63 +28,72 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#include "resource_importer_theora.h"
+#include "thread_local.h"
 
-#include "io/resource_saver.h"
-#include "os/file_access.h"
-#include "scene/resources/texture.h"
+#ifdef WINDOWS_ENABLED
+#include <windows.h>
+#else
+#include <pthread.h>
+#endif
 
-String ResourceImporterTheora::get_importer_name() const {
+#include "core/os/memory.h"
+#include "core/print_string.h"
 
-	return "Theora";
+struct ThreadLocalStorage::Impl {
+
+#ifdef WINDOWS_ENABLED
+	DWORD dwFlsIndex;
+#else
+	pthread_key_t key;
+#endif
+
+	void *get_value() const {
+#ifdef WINDOWS_ENABLED
+		return FlsGetValue(dwFlsIndex);
+#else
+		return pthread_getspecific(key);
+#endif
+	}
+
+	void set_value(void *p_value) const {
+#ifdef WINDOWS_ENABLED
+		FlsSetValue(dwFlsIndex, p_value);
+#else
+		pthread_setspecific(key, p_value);
+#endif
+	}
+
+	Impl(void (*p_destr_callback_func)(void *)) {
+#ifdef WINDOWS_ENABLED
+		dwFlsIndex = FlsAlloc(p_destr_callback_func);
+		ERR_FAIL_COND(dwFlsIndex == FLS_OUT_OF_INDEXES);
+#else
+		pthread_key_create(&key, p_destr_callback_func);
+#endif
+	}
+
+	~Impl() {
+#ifdef WINDOWS_ENABLED
+		FlsFree(dwFlsIndex);
+#else
+		pthread_key_delete(key);
+#endif
+	}
+};
+
+void *ThreadLocalStorage::get_value() const {
+	return pimpl->get_value();
 }
 
-String ResourceImporterTheora::get_visible_name() const {
-
-	return "Theora";
-}
-void ResourceImporterTheora::get_recognized_extensions(List<String> *p_extensions) const {
-
-	p_extensions->push_back("ogv");
-	p_extensions->push_back("ogm");
+void ThreadLocalStorage::set_value(void *p_value) const {
+	pimpl->set_value(p_value);
 }
 
-String ResourceImporterTheora::get_save_extension() const {
-	return "ogvstr";
+void ThreadLocalStorage::alloc(void (*p_destr_callback)(void *)) {
+	pimpl = memnew(ThreadLocalStorage::Impl(p_destr_callback));
 }
 
-String ResourceImporterTheora::get_resource_type() const {
-
-	return "VideoStreamTheora";
-}
-
-bool ResourceImporterTheora::get_option_visibility(const String &p_option, const Map<StringName, Variant> &p_options) const {
-
-	return true;
-}
-
-int ResourceImporterTheora::get_preset_count() const {
-	return 0;
-}
-String ResourceImporterTheora::get_preset_name(int p_idx) const {
-
-	return String();
-}
-
-void ResourceImporterTheora::get_import_options(List<ImportOption> *r_options, int p_preset) const {
-
-	r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "loop"), true));
-}
-
-Error ResourceImporterTheora::import(const String &p_source_file, const String &p_save_path, const Map<StringName, Variant> &p_options, List<String> *r_platform_variants, List<String> *r_gen_files) {
-
-	VideoStreamTheora *stream = memnew(VideoStreamTheora);
-	stream->set_file(p_source_file);
-
-	Ref<VideoStreamTheora> ogv_stream = Ref<VideoStreamTheora>(stream);
-
-	return ResourceSaver::save(p_save_path + ".ogvstr", ogv_stream);
-}
-
-ResourceImporterTheora::ResourceImporterTheora() {
+void ThreadLocalStorage::free() {
+	memdelete(pimpl);
+	pimpl = NULL;
 }

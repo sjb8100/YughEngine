@@ -60,7 +60,7 @@ float AnimationNode::blend_input(int p_input, float p_time, bool p_seek, float p
 
 	Ref<AnimationNodeBlendTree> tree = get_parent();
 
-	if (!tree.is_valid() && get_tree()->get_graph_root().ptr() != this) {
+	if (!tree.is_valid() && get_tree()->get_tree_root().ptr() != this) {
 		make_invalid(RTR("Can't blend input because node is not in a tree"));
 		return 0;
 	}
@@ -225,6 +225,11 @@ void AnimationNode::set_input_connection(int p_input, const StringName &p_connec
 }
 
 String AnimationNode::get_caption() const {
+
+	if (get_script_instance()) {
+		return get_script_instance()->call("get_caption");
+	}
+
 	return "Node";
 }
 
@@ -253,8 +258,15 @@ void AnimationNode::remove_input(int p_index) {
 	emit_changed();
 }
 
+void AnimationNode::_set_parent(Object *p_parent) {
+	set_parent(Object::cast_to<AnimationNode>(p_parent));
+}
+
 void AnimationNode::set_parent(AnimationNode *p_parent) {
 	parent = p_parent; //do not use ref because parent contains children
+	if (get_script_instance()) {
+		get_script_instance()->call("_parent_set", p_parent);
+	}
 }
 
 Ref<AnimationNode> AnimationNode::get_parent() const {
@@ -375,10 +387,17 @@ void AnimationNode::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("blend_node", "node", "time", "seek", "blend", "filter", "optimize"), &AnimationNode::blend_node, DEFVAL(FILTER_IGNORE), DEFVAL(true));
 	ClassDB::bind_method(D_METHOD("blend_input", "input_index", "time", "seek", "blend", "filter", "optimize"), &AnimationNode::blend_input, DEFVAL(FILTER_IGNORE), DEFVAL(true));
 
+	ClassDB::bind_method(D_METHOD("set_parent", "parent"), &AnimationNode::_set_parent);
+	ClassDB::bind_method(D_METHOD("get_parent"), &AnimationNode::get_parent);
+	ClassDB::bind_method(D_METHOD("get_tree"), &AnimationNode::get_tree);
+
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "filter_enabled", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NOEDITOR), "set_filter_enabled", "is_filter_enabled");
 	ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "filters", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NOEDITOR | PROPERTY_USAGE_INTERNAL), "_set_filters", "_get_filters");
 
 	BIND_VMETHOD(MethodInfo("process", PropertyInfo(Variant::REAL, "time"), PropertyInfo(Variant::BOOL, "seek")));
+	BIND_VMETHOD(MethodInfo(Variant::STRING, "get_caption"));
+	BIND_VMETHOD(MethodInfo(Variant::STRING, "has_filter"));
+	BIND_VMETHOD(MethodInfo("_parent_set", PropertyInfo(Variant::OBJECT, "parent")));
 
 	ADD_SIGNAL(MethodInfo("removed_from_graph"));
 	BIND_ENUM_CONSTANT(FILTER_IGNORE);
@@ -398,7 +417,7 @@ AnimationNode::AnimationNode() {
 
 ////////////////////
 
-void AnimationTree::set_graph_root(const Ref<AnimationNode> &p_root) {
+void AnimationTree::set_tree_root(const Ref<AnimationNode> &p_root) {
 
 	if (root.is_valid()) {
 		root->set_tree(NULL);
@@ -416,7 +435,7 @@ void AnimationTree::set_graph_root(const Ref<AnimationNode> &p_root) {
 	update_configuration_warning();
 }
 
-Ref<AnimationNode> AnimationTree::get_graph_root() const {
+Ref<AnimationNode> AnimationTree::get_tree_root() const {
 	return root;
 }
 
@@ -681,6 +700,7 @@ void AnimationTree::_clear_caches() {
 void AnimationTree::_process_graph(float p_delta) {
 
 	//check all tracks, see if they need modification
+	root_motion_transform = Transform();
 
 	if (!root.is_valid()) {
 		ERR_PRINT("AnimationTree: root AnimationNode is not set, disabling playback.");
@@ -770,6 +790,8 @@ void AnimationTree::_process_graph(float p_delta) {
 					continue; //may happen should not
 				}
 
+				track->root_motion = root_motion_track == path;
+
 				ERR_CONTINUE(!state.track_map.has(path));
 				int blend_idx = state.track_map[path];
 
@@ -786,29 +808,85 @@ void AnimationTree::_process_graph(float p_delta) {
 
 						TrackCacheTransform *t = static_cast<TrackCacheTransform *>(track);
 
-						Vector3 loc;
-						Quat rot;
-						Vector3 scale;
-
-						Error err = a->transform_track_interpolate(i, time, &loc, &rot, &scale);
-						//ERR_CONTINUE(err!=OK); //used for testing, should be removed
-
-						scale -= Vector3(1.0, 1.0, 1.0); //helps make it work properly with Add nodes
-
-						if (err != OK)
-							continue;
-
 						if (t->process_pass != process_pass) {
 
 							t->process_pass = process_pass;
 							t->loc = Vector3();
 							t->rot = Quat();
+							t->rot_blend_accum = 0;
 							t->scale = Vector3();
 						}
 
-						t->loc = t->loc.linear_interpolate(loc, blend);
-						t->rot = t->rot.slerp(rot, blend);
-						t->scale = t->scale.linear_interpolate(scale, blend);
+						if (track->root_motion) {
+
+							float prev_time = time - delta;
+							if (prev_time < 0) {
+								if (!a->has_loop()) {
+									prev_time = 0;
+								} else {
+									prev_time = a->get_length() + prev_time;
+								}
+							}
+
+							Vector3 loc[2];
+							Quat rot[2];
+							Vector3 scale[2];
+
+							if (prev_time > time) {
+
+								Error err = a->transform_track_interpolate(i, prev_time, &loc[0], &rot[0], &scale[0]);
+								if (err != OK) {
+									continue;
+								}
+
+								a->transform_track_interpolate(i, a->get_length(), &loc[1], &rot[1], &scale[1]);
+
+								t->loc += (loc[1] - loc[0]) * blend;
+								t->scale += (scale[1] - scale[0]) * blend;
+								Quat q = Quat().slerp(rot[0].normalized().inverse() * rot[1].normalized(), blend).normalized();
+								t->rot = (t->rot * q).normalized();
+
+								prev_time = 0;
+							}
+
+							Error err = a->transform_track_interpolate(i, prev_time, &loc[0], &rot[0], &scale[0]);
+							if (err != OK) {
+								continue;
+							}
+
+							a->transform_track_interpolate(i, time, &loc[1], &rot[1], &scale[1]);
+
+							t->loc += (loc[1] - loc[0]) * blend;
+							t->scale += (scale[1] - scale[0]) * blend;
+							Quat q = Quat().slerp(rot[0].normalized().inverse() * rot[1].normalized(), blend).normalized();
+							t->rot = (t->rot * q).normalized();
+
+							prev_time = 0;
+
+						} else {
+							Vector3 loc;
+							Quat rot;
+							Vector3 scale;
+
+							Error err = a->transform_track_interpolate(i, time, &loc, &rot, &scale);
+							//ERR_CONTINUE(err!=OK); //used for testing, should be removed
+
+							scale -= Vector3(1.0, 1.0, 1.0); //helps make it work properly with Add nodes
+
+							if (err != OK)
+								continue;
+
+							t->loc = t->loc.linear_interpolate(loc, blend);
+							if (t->rot_blend_accum==0) {
+								t->rot = rot;
+								t->rot_blend_accum = blend;
+							} else {
+								float rot_total = t->rot_blend_accum + blend;
+								t->rot = rot.slerp(t->rot, t->rot_blend_accum / rot_total).normalized();
+								t->rot_blend_accum = rot_total;
+							}
+							t->scale = t->scale.linear_interpolate(scale, blend);
+						}
 
 					} break;
 					case Animation::TYPE_VALUE: {
@@ -963,7 +1041,22 @@ void AnimationTree::_process_graph(float p_delta) {
 									t->start = time;
 								}
 							} else if (t->playing) {
-								if (t->start > time || (t->len > 0 && time - t->start < t->len)) {
+
+								bool loop = a->has_loop();
+
+								bool stop = false;
+
+								if (!loop && time < t->start) {
+									stop = true;
+								} else if (t->len > 0) {
+									float len = t->start > time ? (a->get_length() - t->start) + time : time - t->start;
+
+									if (len > t->len) {
+										stop=true;
+									}
+								}
+
+								if (stop) {
 									//time to stop
 									t->object->call("stop");
 									t->playing = false;
@@ -972,6 +1065,12 @@ void AnimationTree::_process_graph(float p_delta) {
 							}
 						}
 
+						float db = Math::linear2db(MAX(blend,0.00001));
+						if (t->object->has_method("set_unit_db")) {
+							t->object->call("set_unit_db", db);
+						} else {
+							t->object->call("set_volume_db", db);
+						}
 					} break;
 					case Animation::TYPE_ANIMATION: {
 
@@ -1059,11 +1158,18 @@ void AnimationTree::_process_graph(float p_delta) {
 					Transform xform;
 					xform.origin = t->loc;
 
-					t->scale += Vector3(1.0, 1.0, 1.0); //helps make it work properly with Add nodes
+					t->scale += Vector3(1.0, 1.0, 1.0); //helps make it work properly with Add nodes and root motion
 
 					xform.basis.set_quat_scale(t->rot, t->scale);
 
-					if (t->skeleton && t->bone_idx >= 0) {
+					if (t->root_motion) {
+
+						root_motion_transform = xform;
+
+						if (t->skeleton && t->bone_idx >= 0) {
+							root_motion_transform = (t->skeleton->get_bone_rest(t->bone_idx) * root_motion_transform) * t->skeleton->get_bone_rest(t->bone_idx).affine_inverse();
+						}
+					} else if (t->skeleton && t->bone_idx >= 0) {
 
 						t->skeleton->set_bone_pose(t->bone_idx, xform);
 
@@ -1174,12 +1280,24 @@ String AnimationTree::get_configuration_warning() const {
 	return warning;
 }
 
+void AnimationTree::set_root_motion_track(const NodePath &p_track) {
+	root_motion_track = p_track;
+}
+
+NodePath AnimationTree::get_root_motion_track() const {
+	return root_motion_track;
+}
+
+Transform AnimationTree::get_root_motion_transform() const {
+	return root_motion_transform;
+}
+
 void AnimationTree::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_active", "active"), &AnimationTree::set_active);
 	ClassDB::bind_method(D_METHOD("is_active"), &AnimationTree::is_active);
 
-	ClassDB::bind_method(D_METHOD("set_graph_root", "root"), &AnimationTree::set_graph_root);
-	ClassDB::bind_method(D_METHOD("get_graph_root"), &AnimationTree::get_graph_root);
+	ClassDB::bind_method(D_METHOD("set_tree_root", "root"), &AnimationTree::set_tree_root);
+	ClassDB::bind_method(D_METHOD("get_tree_root"), &AnimationTree::get_tree_root);
 
 	ClassDB::bind_method(D_METHOD("set_process_mode", "mode"), &AnimationTree::set_process_mode);
 	ClassDB::bind_method(D_METHOD("get_process_mode"), &AnimationTree::get_process_mode);
@@ -1187,12 +1305,21 @@ void AnimationTree::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_animation_player", "root"), &AnimationTree::set_animation_player);
 	ClassDB::bind_method(D_METHOD("get_animation_player"), &AnimationTree::get_animation_player);
 
+	ClassDB::bind_method(D_METHOD("set_root_motion_track", "path"), &AnimationTree::set_root_motion_track);
+	ClassDB::bind_method(D_METHOD("get_root_motion_track"), &AnimationTree::get_root_motion_track);
+
+	ClassDB::bind_method(D_METHOD("get_root_motion_transform"), &AnimationTree::get_root_motion_transform);
+
+
+
 	ClassDB::bind_method(D_METHOD("_node_removed"), &AnimationTree::_node_removed);
 
-	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "graph_root", PROPERTY_HINT_RESOURCE_TYPE, "AnimationRootNode", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_DO_NOT_SHARE_ON_DUPLICATE), "set_graph_root", "get_graph_root");
-	ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "anim_player"), "set_animation_player", "get_animation_player");
+	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "tree_root", PROPERTY_HINT_RESOURCE_TYPE, "AnimationRootNode", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_DO_NOT_SHARE_ON_DUPLICATE), "set_tree_root", "get_tree_root");
+	ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "anim_player",PROPERTY_HINT_NODE_PATH_VALID_TYPES,"AnimationPlayer"), "set_animation_player", "get_animation_player");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "active"), "set_active", "is_active");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "process_mode", PROPERTY_HINT_ENUM, "Physics,Idle"), "set_process_mode", "get_process_mode");
+	ADD_GROUP("Root Motion", "root_motion_");
+	ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "root_motion_track"), "set_root_motion_track", "get_root_motion_track");
 }
 
 AnimationTree::AnimationTree() {

@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  resource_importer_webm.cpp                                           */
+/*  util_macros.h                                                        */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -28,69 +28,32 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#include "resource_importer_webm.h"
+#ifndef UTIL_MACROS_H
+#define UTIL_MACROS_H
 
-#include "io/resource_saver.h"
-#include "os/file_access.h"
-#include "scene/resources/texture.h"
-#include "video_stream_webm.h"
+// noreturn
 
-String ResourceImporterWebm::get_importer_name() const {
+#undef _NO_RETURN_
 
-	return "Webm";
-}
+#ifdef __GNUC__
+#define _NO_RETURN_ __attribute__((noreturn))
+#elif _MSC_VER
+#define _NO_RETURN_ __declspec(noreturn)
+#else
+#error Platform or compiler not supported
+#endif
 
-String ResourceImporterWebm::get_visible_name() const {
+// unreachable
 
-	return "Webm";
-}
-void ResourceImporterWebm::get_recognized_extensions(List<String> *p_extensions) const {
+#if defined(_MSC_VER)
+#define _UNREACHABLE_() __assume(0)
+#elif defined(__GNUC__) && (__GNUC__ * 100 + __GNUC_MINOR__) >= 405
+#define _UNREACHABLE_() __builtin_unreachable()
+#else
+#define _UNREACHABLE_() \
+	CRASH_NOW();        \
+	do {                \
+	} while (true);
+#endif
 
-	p_extensions->push_back("webm");
-}
-
-String ResourceImporterWebm::get_save_extension() const {
-	return "webmstr";
-}
-
-String ResourceImporterWebm::get_resource_type() const {
-
-	return "VideoStreamWebm";
-}
-
-bool ResourceImporterWebm::get_option_visibility(const String &p_option, const Map<StringName, Variant> &p_options) const {
-
-	return true;
-}
-
-int ResourceImporterWebm::get_preset_count() const {
-	return 0;
-}
-String ResourceImporterWebm::get_preset_name(int p_idx) const {
-
-	return String();
-}
-
-void ResourceImporterWebm::get_import_options(List<ImportOption> *r_options, int p_preset) const {
-
-	r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "loop"), true));
-}
-
-Error ResourceImporterWebm::import(const String &p_source_file, const String &p_save_path, const Map<StringName, Variant> &p_options, List<String> *r_platform_variants, List<String> *r_gen_files) {
-
-	FileAccess *f = FileAccess::open(p_source_file, FileAccess::READ);
-	if (!f) {
-		ERR_FAIL_COND_V(!f, ERR_CANT_OPEN);
-	}
-	memdelete(f);
-
-	VideoStreamWebm *stream = memnew(VideoStreamWebm);
-	stream->set_file(p_source_file);
-
-	Ref<VideoStreamWebm> webm_stream = Ref<VideoStreamWebm>(stream);
-
-	return ResourceSaver::save(p_save_path + ".webmstr", webm_stream);
-}
-
-ResourceImporterWebm::ResourceImporterWebm() {
-}
+#endif // UTIL_MACROS_H

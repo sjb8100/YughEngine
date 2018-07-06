@@ -49,6 +49,8 @@
 #include "mono_gd/gd_mono_class.h"
 #include "mono_gd/gd_mono_marshal.h"
 #include "signal_awaiter_utils.h"
+#include "utils/macros.h"
+#include "utils/thread_local.h"
 
 #define CACHED_STRING_NAME(m_var) (CSharpLanguage::get_singleton()->get_string_names().m_var)
 
@@ -296,30 +298,28 @@ Ref<Script> CSharpLanguage::get_template(const String &p_class_name, const Strin
 	String script_template = "using " BINDINGS_NAMESPACE ";\n"
 							 "using System;\n"
 							 "\n"
-							 "public class %CLASS_NAME% : %BASE_CLASS_NAME%\n"
+							 "public class %CLASS% : %BASE%\n"
 							 "{\n"
-							 "    // Member variables here, example:\n"
+							 "    // Declare member variables here. Examples:\n"
 							 "    // private int a = 2;\n"
-							 "    // private string b = \"textvar\";\n"
+							 "    // private string b = \"text\";\n"
 							 "\n"
+							 "    // Called when the node enters the scene tree for the first time.\n"
 							 "    public override void _Ready()\n"
 							 "    {\n"
-							 "        // Called every time the node is added to the scene.\n"
-							 "        // Initialization here.\n"
 							 "        \n"
 							 "    }\n"
 							 "\n"
-							 "//    public override void _Process(float delta)\n"
-							 "//    {\n"
-							 "//        // Called every frame. Delta is time since last frame.\n"
-							 "//        // Update game logic here.\n"
-							 "//        \n"
-							 "//    }\n"
+							 "//  // Called every frame. 'delta' is the elapsed time since the previous frame.\n"
+							 "//  public override void _Process(float delta)\n"
+							 "//  {\n"
+							 "//      \n"
+							 "//  }\n"
 							 "}\n";
 
 	String base_class_name = get_base_class_name(p_base_class_name, p_class_name);
-	script_template = script_template.replace("%BASE_CLASS_NAME%", base_class_name)
-							  .replace("%CLASS_NAME%", p_class_name);
+	script_template = script_template.replace("%BASE%", base_class_name)
+							  .replace("%CLASS%", p_class_name);
 
 	Ref<CSharpScript> script;
 	script.instance();
@@ -476,7 +476,7 @@ String CSharpLanguage::_get_indentation() const {
 Vector<ScriptLanguage::StackInfo> CSharpLanguage::debug_get_current_stack_info() {
 
 #ifdef DEBUG_ENABLED
-	// Printing an error here will result in endless recursion, so we must be careful
+	_TLS_RECURSION_GUARD_V_(Vector<StackInfo>());
 
 	if (!gdmono->is_runtime_initialized() || !GDMono::get_singleton()->get_core_api_assembly() || !GDMonoUtils::mono_cache.corlib_cache_updated)
 		return Vector<StackInfo>();
@@ -500,15 +500,15 @@ Vector<ScriptLanguage::StackInfo> CSharpLanguage::debug_get_current_stack_info()
 #ifdef DEBUG_ENABLED
 Vector<ScriptLanguage::StackInfo> CSharpLanguage::stack_trace_get_info(MonoObject *p_stack_trace) {
 
-	// Printing an error here could result in endless recursion, so we must be careful
+	_TLS_RECURSION_GUARD_V_(Vector<StackInfo>());
 
-	MonoObject *exc = NULL;
+	MonoException *exc = NULL;
 
 	GDMonoUtils::StackTrace_GetFrames st_get_frames = CACHED_METHOD_THUNK(System_Diagnostics_StackTrace, GetFrames);
-	MonoArray *frames = st_get_frames(p_stack_trace, &exc);
+	MonoArray *frames = st_get_frames(p_stack_trace, (MonoObject **)&exc);
 
 	if (exc) {
-		GDMonoUtils::print_unhandled_exception(exc, true /* fail silently to avoid endless recursion */);
+		GDMonoUtils::debug_print_unhandled_exception(exc);
 		return Vector<StackInfo>();
 	}
 
@@ -529,10 +529,10 @@ Vector<ScriptLanguage::StackInfo> CSharpLanguage::stack_trace_get_info(MonoObjec
 		MonoString *file_name;
 		int file_line_num;
 		MonoString *method_decl;
-		get_sf_info(frame, &file_name, &file_line_num, &method_decl, &exc);
+		get_sf_info(frame, &file_name, &file_line_num, &method_decl, (MonoObject **)&exc);
 
 		if (exc) {
-			GDMonoUtils::print_unhandled_exception(exc, true /* fail silently to avoid endless recursion */);
+			GDMonoUtils::debug_print_unhandled_exception(exc);
 			return Vector<StackInfo>();
 		}
 
@@ -561,12 +561,12 @@ void CSharpLanguage::frame() {
 
 			ERR_FAIL_NULL(thunk);
 
-			MonoObject *ex;
-			thunk(task_scheduler, &ex);
+			MonoException *exc = NULL;
+			thunk(task_scheduler, (MonoObject **)&exc);
 
-			if (ex) {
-				mono_print_unhandled_exception(ex);
-				ERR_FAIL();
+			if (exc) {
+				GDMonoUtils::debug_unhandled_exception(exc);
+				_UNREACHABLE_();
 			}
 		}
 	}
@@ -745,10 +745,9 @@ void CSharpLanguage::reload_assemblies_if_needed(bool p_soft_reload) {
 	for (Map<Ref<CSharpScript>, Map<ObjectID, List<Pair<StringName, Variant> > > >::Element *E = to_reload.front(); E; E = E->next()) {
 
 		Ref<CSharpScript> scr = E->key();
-		scr->signals_invalidated = true;
 		scr->exports_invalidated = true;
+		scr->signals_invalidated = true;
 		scr->reload(p_soft_reload);
-		scr->update_signals();
 		scr->update_exports();
 
 		//restore state if saved
@@ -1078,11 +1077,11 @@ bool CSharpInstance::get(const StringName &p_name, Variant &r_ret) const {
 		GDMonoProperty *property = top->get_property(p_name);
 
 		if (property) {
-			MonoObject *exc = NULL;
+			MonoException *exc = NULL;
 			MonoObject *value = property->get_value(mono_object, &exc);
 			if (exc) {
 				r_ret = Variant();
-				GDMonoUtils::print_unhandled_exception(exc);
+				GDMonoUtils::set_pending_exception(exc);
 			} else {
 				r_ret = GDMonoMarshal::mono_object_to_variant(value);
 			}
@@ -1490,12 +1489,12 @@ bool CSharpScript::_update_exports() {
 			CACHED_FIELD(GodotObject, ptr)->set_value_raw(tmp_object, tmp_object); // FIXME WTF is this workaround
 
 			GDMonoMethod *ctor = script_class->get_method(CACHED_STRING_NAME(dotctor), 0);
-			MonoObject *ex = NULL;
-			ctor->invoke(tmp_object, NULL, &ex);
+			MonoException *exc = NULL;
+			ctor->invoke(tmp_object, NULL, &exc);
 
-			if (ex) {
+			if (exc) {
 				ERR_PRINT("Exception thrown from constructor of temporary MonoObject:");
-				mono_print_unhandled_exception(ex);
+				GDMonoUtils::debug_print_unhandled_exception(exc);
 				tmp_object = NULL;
 				ERR_FAIL_V(false);
 			}
@@ -1544,11 +1543,11 @@ bool CSharpScript::_update_exports() {
 						exported_members_cache.push_front(prop_info);
 
 						if (tmp_object) {
-							MonoObject *exc = NULL;
+							MonoException *exc = NULL;
 							MonoObject *ret = property->get_value(tmp_object, &exc);
 							if (exc) {
 								exported_members_defval_cache[name] = Variant();
-								GDMonoUtils::print_unhandled_exception(exc);
+								GDMonoUtils::debug_print_unhandled_exception(exc);
 							} else {
 								exported_members_defval_cache[name] = GDMonoMarshal::mono_object_to_variant(ret);
 							}
@@ -1579,37 +1578,33 @@ bool CSharpScript::_update_exports() {
 	return false;
 }
 
-bool CSharpScript::_update_signals() {
-	if (!valid)
-		return false;
+void CSharpScript::load_script_signals(GDMonoClass *p_class, GDMonoClass *p_native_class) {
 
-	bool changed = false;
-
-	if (signals_invalidated) {
-		signals_invalidated = false;
-
-		GDMonoClass *top = script_class;
-
-		_signals.clear();
-		changed = true; // TODO Do a real check for change
-
-		while (top && top != native) {
-			const Vector<GDMonoClass *> &delegates = top->get_all_delegates();
-			for (int i = delegates.size() - 1; i >= 0; --i) {
-				Vector<Argument> parameters;
-
-				GDMonoClass *delegate = delegates[i];
-
-				if (_get_signal(top, delegate, parameters)) {
-					_signals[delegate->get_name()] = parameters;
-				}
-			}
-
-			top = top->get_parent_class();
-		}
+	// no need to load the script's signals more than once
+	if (!signals_invalidated) {
+		return;
 	}
 
-	return changed;
+	// make sure this classes signals are empty when loading for the first time
+	_signals.clear();
+
+	GDMonoClass *top = p_class;
+	while (top && top != p_native_class) {
+		const Vector<GDMonoClass *> &delegates = top->get_all_delegates();
+		for (int i = delegates.size() - 1; i >= 0; --i) {
+			Vector<Argument> parameters;
+
+			GDMonoClass *delegate = delegates[i];
+
+			if (_get_signal(top, delegate, parameters)) {
+				_signals[delegate->get_name()] = parameters;
+			}
+		}
+
+		top = top->get_parent_class();
+	}
+
+	signals_invalidated = false;
 }
 
 bool CSharpScript::_get_signal(GDMonoClass *p_class, GDMonoClass *p_delegate, Vector<Argument> &params) {
@@ -1848,6 +1843,8 @@ Ref<CSharpScript> CSharpScript::create_for_managed_type(GDMonoClass *p_class) {
 		top = top->get_parent_class();
 	}
 
+	script->load_script_signals(script->script_class, script->native);
+
 	return script;
 }
 
@@ -1918,7 +1915,7 @@ CSharpInstance *CSharpScript::_create_instance(const Variant **p_args, int p_arg
 
 	// Construct
 	GDMonoMethod *ctor = script_class->get_method(CACHED_STRING_NAME(dotctor), p_argcount);
-	ctor->invoke(mono_object, p_args, NULL);
+	ctor->invoke(mono_object, p_args);
 
 	// Tie managed to unmanaged
 	instance->gchandle = MonoGCHandle::create_strong(mono_object);
@@ -1973,7 +1970,6 @@ ScriptInstance *CSharpScript::instance_create(Object *p_this) {
 		PlaceHolderScriptInstance *si = memnew(PlaceHolderScriptInstance(CSharpLanguage::get_singleton(), Ref<Script>(this), p_this));
 		placeholders.insert(si);
 		_update_exports();
-		_update_signals();
 		return si;
 #else
 		return NULL;
@@ -1991,8 +1987,6 @@ ScriptInstance *CSharpScript::instance_create(Object *p_this) {
 		ERR_EXPLAIN("Cannot instance script because the class '" + name + "' could not be found. Script: " + get_path());
 		ERR_FAIL_V(NULL);
 	}
-
-	update_signals();
 
 	if (native) {
 		String native_name = native->get_name();
@@ -2114,6 +2108,8 @@ Error CSharpScript::reload(bool p_keep_state) {
 				top->fetch_methods_with_godot_api_checks(native);
 				top = top->get_parent_class();
 			}
+
+			load_script_signals(script_class, native);
 		}
 
 		return OK;
@@ -2171,10 +2167,6 @@ void CSharpScript::get_script_signal_list(List<MethodInfo> *r_signals) const {
 		}
 		r_signals->push_back(mi);
 	}
-}
-
-void CSharpScript::update_signals() {
-	_update_signals();
 }
 
 Ref<Script> CSharpScript::get_base_script() const {
@@ -2241,8 +2233,9 @@ CSharpScript::CSharpScript() :
 #ifdef TOOLS_ENABLED
 	source_changed_cache = false;
 	exports_invalidated = true;
-	signals_invalidated = true;
 #endif
+
+	signals_invalidated = true;
 
 	_resource_path_changed();
 

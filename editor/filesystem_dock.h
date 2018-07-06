@@ -106,6 +106,7 @@ private:
 	Button *button_display_mode;
 	Button *button_hist_next;
 	Button *button_hist_prev;
+	Button *button_show;
 	LineEdit *current_path;
 	LineEdit *search_box;
 	TextureRect *search_icon;
@@ -128,6 +129,7 @@ private:
 	LineEdit *duplicate_dialog_text;
 	ConfirmationDialog *make_dir_dialog;
 	LineEdit *make_dir_dialog_text;
+	ConfirmationDialog *overwrite_dialog;
 	ScriptCreateDialog *make_script_dialog_text;
 
 	class FileOrFolder {
@@ -145,6 +147,7 @@ private:
 	FileOrFolder to_rename;
 	FileOrFolder to_duplicate;
 	Vector<FileOrFolder> to_move;
+	String to_move_path;
 
 	Vector<String> history;
 	int history_pos;
@@ -186,11 +189,14 @@ private:
 	void _update_dependencies_after_move(const Map<String, String> &p_renames) const;
 	void _update_resource_paths_after_move(const Map<String, String> &p_renames) const;
 	void _update_favorite_dirs_list_after_move(const Map<String, String> &p_renames) const;
+	void _update_project_settings_after_move(const Map<String, String> &p_renames) const;
 
 	void _make_dir_confirm();
 	void _rename_operation_confirm();
 	void _duplicate_operation_confirm();
-	void _move_operation_confirm(const String &p_to_path);
+	void _move_with_overwrite();
+	bool _check_existing();
+	void _move_operation_confirm(const String &p_to_path, bool overwrite = false);
 
 	void _file_option(int p_option);
 	void _folder_option(int p_option);
@@ -204,6 +210,7 @@ private:
 	void _rescan();
 
 	void _favorites_pressed();
+	void _show_current_scene_file();
 	void _search_changed(const String &p_text);
 
 	void _dir_rmb_pressed(const Vector2 &p_pos);

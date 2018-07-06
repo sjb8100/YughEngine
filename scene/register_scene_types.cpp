@@ -66,10 +66,11 @@
 #include "scene/animation/animation_blend_space_1d.h"
 #include "scene/animation/animation_blend_space_2d.h"
 #include "scene/animation/animation_blend_tree.h"
-#include "scene/animation/animation_tree.h"
 #include "scene/animation/animation_node_state_machine.h"
 #include "scene/animation/animation_player.h"
+#include "scene/animation/animation_tree.h"
 #include "scene/animation/animation_tree_player.h"
+#include "scene/animation/root_motion_view.h"
 #include "scene/animation/tween.h"
 #include "scene/audio/audio_player.h"
 #include "scene/gui/box_container.h"
@@ -387,6 +388,9 @@ void register_scene_types() {
 	ClassDB::register_class<NavigationMesh>();
 	ClassDB::register_class<Navigation>();
 
+	ClassDB::register_class<RootMotionView>();
+	ClassDB::set_class_enabled("RootMotionView", false); //disabled by default, enabled by editor
+
 	ClassDB::register_class<AnimationTree>();
 	ClassDB::register_class<AnimationNode>();
 	ClassDB::register_class<AnimationRootNode>();
@@ -398,7 +402,8 @@ void register_scene_types() {
 	ClassDB::register_class<AnimationNodeOutput>();
 	ClassDB::register_class<AnimationNodeOneShot>();
 	ClassDB::register_class<AnimationNodeAnimation>();
-	ClassDB::register_class<AnimationNodeAdd>();
+	ClassDB::register_class<AnimationNodeAdd2>();
+	ClassDB::register_class<AnimationNodeAdd3>();
 	ClassDB::register_class<AnimationNodeBlend2>();
 	ClassDB::register_class<AnimationNodeBlend3>();
 	ClassDB::register_class<AnimationNodeTimeScale>();

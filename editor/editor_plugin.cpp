@@ -310,7 +310,7 @@ void EditorPlugin::remove_autoload_singleton(const String &p_name) {
 }
 
 ToolButton *EditorPlugin::add_control_to_bottom_panel(Control *p_control, const String &p_title) {
-
+	ERR_FAIL_NULL_V(p_control, NULL);
 	return EditorNode::get_singleton()->add_bottom_panel_item(p_title, p_control);
 }
 
@@ -333,6 +333,7 @@ void EditorPlugin::remove_control_from_bottom_panel(Control *p_control) {
 }
 
 void EditorPlugin::add_control_to_container(CustomControlContainer p_location, Control *p_control) {
+	ERR_FAIL_NULL(p_control);
 
 	switch (p_location) {
 
@@ -382,6 +383,7 @@ void EditorPlugin::add_control_to_container(CustomControlContainer p_location, C
 }
 
 void EditorPlugin::remove_control_from_container(CustomControlContainer p_location, Control *p_control) {
+	ERR_FAIL_NULL(p_control);
 
 	switch (p_location) {
 
@@ -717,6 +719,10 @@ EditorInterface *EditorPlugin::get_editor_interface() {
 	return EditorInterface::get_singleton();
 }
 
+ScriptCreateDialog *EditorPlugin::get_script_create_dialog() {
+	return EditorNode::get_singleton()->get_script_create_dialog();
+}
+
 void EditorPlugin::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("add_control_to_container", "container", "control"), &EditorPlugin::add_control_to_container);
@@ -753,6 +759,7 @@ void EditorPlugin::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_force_draw_over_forwarding_enabled"), &EditorPlugin::set_force_draw_over_forwarding_enabled);
 
 	ClassDB::bind_method(D_METHOD("get_editor_interface"), &EditorPlugin::get_editor_interface);
+	ClassDB::bind_method(D_METHOD("get_script_create_dialog"), &EditorPlugin::get_script_create_dialog);
 
 	ClassDB::add_virtual_method(get_class_static(), MethodInfo(Variant::BOOL, "forward_canvas_gui_input", PropertyInfo(Variant::OBJECT, "event", PROPERTY_HINT_RESOURCE_TYPE, "InputEvent")));
 	ClassDB::add_virtual_method(get_class_static(), MethodInfo("forward_draw_over_viewport", PropertyInfo(Variant::OBJECT, "overlay", PROPERTY_HINT_RESOURCE_TYPE, "Control")));

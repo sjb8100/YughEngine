@@ -50,7 +50,7 @@ void EditorPropertyText::_text_changed(const String &p_string) {
 	if (updating)
 		return;
 
-	emit_signal("property_changed", get_edited_property(), p_string);
+	emit_signal("property_changed", get_edited_property(), p_string, true);
 }
 
 void EditorPropertyText::update_property() {
@@ -78,12 +78,12 @@ EditorPropertyText::EditorPropertyText() {
 
 void EditorPropertyMultilineText::_big_text_changed() {
 	text->set_text(big_text->get_text());
-	emit_signal("property_changed", get_edited_property(), big_text->get_text());
+	emit_signal("property_changed", get_edited_property(), big_text->get_text(), true);
 }
 
 void EditorPropertyMultilineText::_text_changed() {
 
-	emit_signal("property_changed", get_edited_property(), text->get_text());
+	emit_signal("property_changed", get_edited_property(), text->get_text(), true);
 }
 
 void EditorPropertyMultilineText::_open_big_text() {
@@ -1522,14 +1522,23 @@ EditorPropertyColor::EditorPropertyColor() {
 
 void EditorPropertyNodePath::_node_selected(const NodePath &p_path) {
 
+	NodePath path = p_path;
 	Node *base_node = Object::cast_to<Node>(get_edited_object());
-	emit_signal("property_changed", get_edited_property(), base_node->get_path().rel_path_to(p_path));
+	if (base_node == NULL && get_edited_object()->has_method("get_root_path")) {
+		base_node = get_edited_object()->call("get_root_path");
+	}
+	if (base_node) { // for AnimationTrackKeyEdit
+		path = base_node->get_path().rel_path_to(p_path);
+	}
+	emit_signal("property_changed", get_edited_property(), path);
 	update_property();
 }
 
 void EditorPropertyNodePath::_node_assign() {
 	if (!scene_tree) {
 		scene_tree = memnew(SceneTreeDialog);
+		scene_tree->get_scene_tree()->set_show_enabled_subscene(true);
+		scene_tree->get_scene_tree()->set_valid_types(valid_types);
 		add_child(scene_tree);
 		scene_tree->connect("selected", this, "_node_selected");
 	}
@@ -1584,9 +1593,10 @@ void EditorPropertyNodePath::update_property() {
 	assign->set_icon(icon);
 }
 
-void EditorPropertyNodePath::setup(const NodePath &p_base_hint) {
+void EditorPropertyNodePath::setup(const NodePath &p_base_hint, Vector<StringName> p_valid_types) {
 
 	base_hint = p_base_hint;
+	valid_types = p_valid_types;
 }
 
 void EditorPropertyNodePath::_notification(int p_what) {
@@ -1779,6 +1789,7 @@ void EditorPropertyResource::_menu_option(int p_which) {
 
 				if (!scene_tree) {
 					scene_tree = memnew(SceneTreeDialog);
+					scene_tree->get_scene_tree()->set_show_enabled_subscene(true);
 					add_child(scene_tree);
 					scene_tree->connect("selected", this, "_viewport_selected");
 					scene_tree->set_title(TTR("Pick a Viewport"));
@@ -2665,7 +2676,12 @@ bool EditorInspectorDefaultPlugin::parse_property(Object *p_object, Variant::Typ
 
 			EditorPropertyNodePath *editor = memnew(EditorPropertyNodePath);
 			if (p_hint == PROPERTY_HINT_NODE_PATH_TO_EDITED_NODE && p_hint_text != String()) {
-				editor->setup(p_hint_text);
+				editor->setup(p_hint_text, Vector<StringName>());
+			}
+			if (p_hint == PROPERTY_HINT_NODE_PATH_VALID_TYPES && p_hint_text != String()) {
+				Vector<String> types = p_hint_text.split(",", false);
+				Vector<StringName> sn = Variant(types); //convert via variant
+				editor->setup(NodePath(), sn);
 			}
 			add_property_editor(p_path, editor);
 
@@ -2684,34 +2700,42 @@ bool EditorInspectorDefaultPlugin::parse_property(Object *p_object, Variant::Typ
 		} break;
 		case Variant::ARRAY: {
 			EditorPropertyArray *editor = memnew(EditorPropertyArray);
+			editor->setup(Variant::ARRAY);
 			add_property_editor(p_path, editor);
 		} break;
 		case Variant::POOL_BYTE_ARRAY: {
 			EditorPropertyArray *editor = memnew(EditorPropertyArray);
+			editor->setup(Variant::POOL_BYTE_ARRAY);
 			add_property_editor(p_path, editor);
 		} break; // 20
 		case Variant::POOL_INT_ARRAY: {
 			EditorPropertyArray *editor = memnew(EditorPropertyArray);
+			editor->setup(Variant::POOL_INT_ARRAY);
 			add_property_editor(p_path, editor);
 		} break;
 		case Variant::POOL_REAL_ARRAY: {
 			EditorPropertyArray *editor = memnew(EditorPropertyArray);
+			editor->setup(Variant::POOL_REAL_ARRAY);
 			add_property_editor(p_path, editor);
 		} break;
 		case Variant::POOL_STRING_ARRAY: {
 			EditorPropertyArray *editor = memnew(EditorPropertyArray);
+			editor->setup(Variant::POOL_STRING_ARRAY);
 			add_property_editor(p_path, editor);
 		} break;
 		case Variant::POOL_VECTOR2_ARRAY: {
 			EditorPropertyArray *editor = memnew(EditorPropertyArray);
+			editor->setup(Variant::POOL_VECTOR2_ARRAY);
 			add_property_editor(p_path, editor);
 		} break;
 		case Variant::POOL_VECTOR3_ARRAY: {
 			EditorPropertyArray *editor = memnew(EditorPropertyArray);
+			editor->setup(Variant::POOL_VECTOR3_ARRAY);
 			add_property_editor(p_path, editor);
 		} break; // 25
 		case Variant::POOL_COLOR_ARRAY: {
 			EditorPropertyArray *editor = memnew(EditorPropertyArray);
+			editor->setup(Variant::POOL_COLOR_ARRAY);
 			add_property_editor(p_path, editor);
 		} break;
 		default: {}
