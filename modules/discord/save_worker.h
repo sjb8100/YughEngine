@@ -26,6 +26,8 @@ public:
 		// Get all subsystems and attempt to start them
 		// If they start, add them to our list
 		CurrentUserFile = MakeUserDict();
+		CurrentUserFile["name"] = "no_name";
+		EncryptKey = "fdzierjeirofdanjodahugweig382947HFIUAfhy7935auih";
 	}
 
 	~USaveWorker() {
@@ -53,6 +55,25 @@ public:
 	// @param Settings - The FSettingsBundle to apply.
 	void SetSettings(Dictionary Settings);
 
+	Dictionary MakeSettingsDict() {
+		Dictionary meta;
+
+		meta["aa_quality"] = 2;
+		meta["post_setting"] = 2;
+		meta["shadow_setting"] = 2;
+		meta["texture_setting"] = 2;
+		meta["resolution"] = "1920x1080";
+		meta["fullscreen"] = false;
+		meta["brightness"] = 1.0f;
+		meta["gamma"] = 2.18f;
+		meta["language_code"] = "en";
+		meta["has_seen_production"] = false;
+		meta["has_seen_credits"] = false;
+		meta["has_selected_language"] = false;
+
+		return meta;
+	}
+
 	//////////////////////////////////////////////////////////////////////////
 	// User and save game tools
 	// One user is loaded into the game at any time
@@ -67,6 +88,7 @@ public:
 	// Current usersave file for the game. Possible that it's not serialized to the disc yet
 	Dictionary CurrentUserFile;
 	Dictionary GetCurrentUserFile() { return CurrentUserFile; }
+	void SetCurrentUserFile(String NewUser);
 
 	// Index of the current save game being used from the CurrentUserFile
 	String SaveSlot;
@@ -75,10 +97,6 @@ public:
 
 	// Pushes the current save game onto the HDD
 	void PushSaveGame();
-	 
-	// Pulls a save game from the HDD and puts it into CurrentSaveFile
-	// @param FileName - The name of the file to pull from the disc.
-	void PullSaveGame(const String FileName);
 
 	// Saves data from the game into the CurrentSaveFile.
 	void SaveGameData(bool freeze);
@@ -98,46 +116,50 @@ public:
 	// @param FileName - The name of the file to check for and delete
 	void DeleteSaveGame(const String FileName);
 
-	// Archives the CurrentSaveFile
-	// @param ArchiveName - The name associated with the archive.
-	void ArchiveSaveGame(String ArchiveName);
-
 	// Utility - these are used to save and load the user data. Not called in gdscript directly.
+
+	// Used for encrypting the save data so users can't mess with it
+	String EncryptKey;
 
 	void SaveGameToSlot(Dictionary File, String FileName);
 
+	void DeleteGameFromSlot(String FileName);
+
 	Dictionary LoadGameFromSlot(String FileName);
 
-	Dictionary GetUserSaveGames() { return CurrentUserFile["save_games"]; }
-
-	Dictionary GetUserCurrentSave() { return GetUserSaveGames()[SaveSlot]; }
+	Dictionary GetUserSaveGames() { return Dictionary(CurrentUserFile["save_games"]); }
+	Dictionary GetUserCurrentSave() { return Dictionary(GetUserSaveGames()[SaveSlot]); }
+	Dictionary GetUserControls() { return Dictionary(CurrentUserFile["controls"]); }
 
 	String GetSavePath(const String FileName) { return "user://" + FileName + ".save"; }
 
-	void DeleteGameFromSlot(String FileName);
+protected:
+	static USaveWorker *singleton;
+
+	static void _bind_methods() {
+		ClassDB::bind_method("get_user", &USaveWorker::GetCurrentUserFile);
+		ClassDB::bind_method(D_METHOD("set_user", "user"), &USaveWorker::SetCurrentUserFile);
+
+		ClassDB::bind_method(D_METHOD("save_game", "freeze"), &USaveWorker::SaveGameData);
+		ClassDB::bind_method("load_game", &USaveWorker::LoadGameData);
+
+		ClassDB::bind_method(D_METHOD("save_object", "node"), &USaveWorker::SaveObjectData);
+		ClassDB::bind_method(D_METHOD("load_object", "node"), &USaveWorker::LoadObjectData);
+
+		ClassDB::bind_method("get_save_slot", &USaveWorker::GetSaveSlot);
+		ClassDB::bind_method(D_METHOD("set_save_slot", "save_slot"), &USaveWorker::SetSaveSlot);
+
+		ClassDB::bind_method("get_controls", &USaveWorker::GetUserControls);
+
+		ClassDB::bind_method("get_settings_data", &USaveWorker::GetMetaSaveFile);
+		ClassDB::bind_method(D_METHOD("set_settings", "settings"), &USaveWorker::SetSettings);
+	}
+
+private:
 
 	//////////////////////////////////////////////////////////////////////////
 	// Dictionary definitions
 	//////////////////////////////////////////////////////////////////////////
-
-	Dictionary MakeSettingsDict() {
-		Dictionary meta;
-
-		meta["aa_quality"] = 2;
-		meta["post_setting"] = 2;
-		meta["shadow_setting"] = 2;
-		meta["texture_setting"] = 2;
-		meta["resolution"] = "1920x1080";
-		meta["fullscreen"] = false;
-		meta["brightness"] = 1.0f;
-		meta["gamma"] = 2.18f;
-		meta["language_code"] = "en";
-		meta["has_seen_production"] = false;
-		meta["has_seen_credits"] = false;
-		meta["has_selected_language"] = false;
-
-		return meta;
-	}
 
 	Dictionary MakeUserDict() {
 		Dictionary user;
@@ -175,28 +197,6 @@ public:
 		return savegame;
 	}
 
-	
-
-protected:
-	static USaveWorker *singleton;
-
-	static void _bind_methods() {
-		ClassDB::bind_method("get_user", &USaveWorker::GetCurrentUserFile);
-		ClassDB::bind_method(D_METHOD("save_game", "freeze"), &USaveWorker::SaveGameData);
-		ClassDB::bind_method("load_game", &USaveWorker::LoadGameData);
-
-		ClassDB::bind_method(D_METHOD("save_object", "node"), &USaveWorker::SaveObjectData);
-		ClassDB::bind_method(D_METHOD("load_object", "node"), &USaveWorker::LoadObjectData);
-
-		ClassDB::bind_method("get_save_slot", &USaveWorker::GetSaveSlot);
-		ClassDB::bind_method(D_METHOD("set_save_slot", "save_slot"), &USaveWorker::SetSaveSlot);
-
-
-		ClassDB::bind_method("get_settings_data", &USaveWorker::GetMetaSaveFile);
-		ClassDB::bind_method(D_METHOD("set_settings", "settings"), &USaveWorker::SetSettings);
-	}
-
-private:
 	//////////////////////////////////////////////////////////////////////////
 	// Saving
 	//////////////////////////////////////////////////////////////////////////
@@ -204,11 +204,11 @@ private:
 	// Clears the data from ActorRecords, and then puts all savable game data into it
 	// @return A dictionary with all of the save data incorporated into it.
 	// Dictionary is of the format { node_path : (Dictionary) param_data }
-	Dictionary IterateSaveGameData();
+	Dictionary MakeSaveGameRecords();
 
 	// Creates or overwrites a single referenced actor
 	// @param ActorRecords - The ActorRecords you want the actor saved to
-	void IterateSaveObjectData(Node *obj, Dictionary ActorRecords);
+	void MakeNodeRecord(Node *obj, Dictionary ActorRecords);
 
 	//////////////////////////////////////////////////////////////////////////
 	// Loading
@@ -247,7 +247,7 @@ private:
 	// @param Obj - The UObject to serialize.
 	// @return A dictionary containing values of the serialized params
 	// from the Obj, in the form { param_name : param_value }
-	Dictionary SerializeObject(Node *Obj);
+	Dictionary SerializeNode(Node *Obj);
 
 	// Reads out an object's serialization from Record and puts it onto Obj
 	// @param Obj - The UObject to load data to

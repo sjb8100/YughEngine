@@ -83,3 +83,11 @@
 //	else
 //		return CurrentTime.TrackedTime.GetHours() + (float)CurrentTime.TrackedTime.GetMinutes() / CurrentTime.TimeScales.MinutesInHour;
 //}
+
+void TimeKeeper::set_tracked_seconds(int p_seconds) {
+	tracked_seconds = p_seconds;
+}
+
+int TimeKeeper::get_tracked_seconds() const {
+	return tracked_seconds;
+}

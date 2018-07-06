@@ -7,10 +7,18 @@
 #include "core/os/file_access.h"
 #include "core/io/json.h"
 #include "core/os/dir_access.h"
+#include "core/io/file_access_encrypted.h"
 #include "scene/main/viewport.h"
 #include "scene/resources/environment.h"
+#include "core/io/file_access_memory.h"
+#include "core/math/math_funcs.h"
+#include "core/variant_parser.h"
 
 USaveWorker *USaveWorker::singleton = nullptr;
+
+//////////////////////////////////////////////////////////////////////////
+// Meta stuff
+//////////////////////////////////////////////////////////////////////////
 
 Dictionary USaveWorker::GetMetaSaveFile() {
 
@@ -47,34 +55,36 @@ void USaveWorker::SetSettings(Dictionary Settings) {
 		// Set texture quality
 }
 
-void USaveWorker::PushSaveGame() {
-	// TODO: Save based on the save file's name
-	SaveGameToSlot(CurrentUserFile, "p");
-}
+//////////////////////////////////////////////////////////////////////////
+// User save stuff
+//////////////////////////////////////////////////////////////////////////
 
-void USaveWorker::PullSaveGame(const String FileName) {
-	CurrentUserFile = LoadGameFromSlot(FileName);
+void USaveWorker::SetCurrentUserFile(String NewUser) {
+	if (FileAccess::exists(GetSavePath(NewUser)))
+		CurrentUserFile = LoadGameFromSlot(NewUser).duplicate();
+	else {
+		CurrentUserFile = MakeUserDict();
+		CurrentUserFile["name"] = NewUser;
+		PushSaveGame();
+	}
 }
 
 void USaveWorker::SaveGameData(bool freeze) {
 	Dictionary new_save_data = MakeSaveGame();
-	new_save_data["records"] = IterateSaveGameData();
-	GetUserSaveGames()[SaveSlot] = new_save_data;
+	new_save_data["records"] = MakeSaveGameRecords();
+	GetUserSaveGames()[SaveSlot] = new_save_data.duplicate();
 
 	if (freeze)
 		PushSaveGame();
+		
 }
 
 void USaveWorker::LoadGameData() {
 	IterateLoadGameData(GetUserCurrentSave()["records"]);
 }
 
-void USaveWorker::SaveObjectData(Node* Obj) {
-	IterateSaveObjectData(Obj, GetUserCurrentSave()["records"]);
-}
-
-void USaveWorker::LoadObjectData(Node* Obj) {
-	IterateLoadActorObject(Obj, GetUserCurrentSave()["records"]);
+void USaveWorker::PushSaveGame() {
+	SaveGameToSlot(CurrentUserFile, CurrentUserFile["name"]);
 }
 
 void USaveWorker::DeleteSaveGame(const String FileName) {
@@ -82,68 +92,95 @@ void USaveWorker::DeleteSaveGame(const String FileName) {
 	if (CurrentUserFile["save_slot_name"] == FileName)
 		CurrentUserFile = MakeSaveGame();
 
-
 	DeleteGameFromSlot(FileName);
 }
 
-void USaveWorker::ArchiveSaveGame(String ArchiveName) {
-	//CurrentSaveFile->ActiveGame.SceneTitle = ArchiveName;
-	//CurrentSaveFile->ArchivedGames.Add(CurrentSaveFile->ActiveGame);
+void USaveWorker::SaveObjectData(Node *Obj) {
+	MakeNodeRecord(Obj, GetUserCurrentSave()["records"]);
 }
+
+void USaveWorker::LoadObjectData(Node *Obj) {
+	IterateLoadActorObject(Obj, GetUserCurrentSave()["records"]);
+}
+
+//////////////////////////////////////////////////////////////////////////
+// Utilities
+//////////////////////////////////////////////////////////////////////////
 
 void USaveWorker::SaveGameToSlot(Dictionary File, String FileName) {
-	//FileAccess* saver = new FileAccess();
+	/*if (EncryptKey == "") {
+		FileAccess *saver = FileAccess::open(GetSavePath(FileName), FileAccess::WRITE);
+		saver->store_line(JSON::print(File));
+		saver->close();
+	} else {
+		FileAccess *saver = FileAccess::open(GetSavePath(FileName), FileAccess::WRITE);
+		FileAccessEncrypted* encrypter = new FileAccessEncrypted();
+		encrypter->open_and_parse_password(saver, EncryptKey, FileAccessEncrypted::MODE_WRITE_AES256);
+		encrypter->close();
+		saver->close();
+	}*/
 
-	//DirAccess* p = DirAccess::create_for_path("user://" + FileName + ".save");
-
-	//saver.open("user://" + FileName + ".save", FileAccess::WRITE);
-	//// TODO: Is this OK?
-	//saver.store_line(JSON::print(File));
-	//saver.close();
+	FileAccess *saver = FileAccess::open(GetSavePath(FileName), FileAccess::WRITE);
+	saver->store_line(JSON::print(File));
+	saver->close();
 }
 
+// Saving/loading functions
 Dictionary USaveWorker::LoadGameFromSlot(String FileName) {
-	//FileAccess* loader = new FileAccess();
+	Dictionary pulled;
 
-	//if (loader.file_exists(GetSavePath(FileName))) {
-	//	loader.open(GetSavePath(FileName), FileAccess::READ);
-	//	String err;
-	//	int err_line;
-	//	Dictionary load;
-	//	JSON::parse(loader.get_line(), load, err, err_line);
-	//	// TODO: Check if there was an error or not
-	//	return load;
-	//}
+	// File access params
+	Variant loaded;
+	String err;
+	int err_int;
 
-	// If there wasn't a file, return an empty dictionary
-	Dictionary empty;
-	return empty;
+	if (FileAccess::exists(GetSavePath(FileName))) {
+		/*if (EncryptKey == "") {
+			FileAccess *loader = FileAccess::open(GetSavePath(FileName), FileAccess::READ);
+			JSON::parse(loader->get_line(), loaded, err, err_int);
+			pulled = Dictionary(loaded);
+			loader->close();
+		} else {
+			FileAccess *loader = FileAccess::open(GetSavePath(FileName), FileAccess::READ);
+			FileAccessEncrypted *decrypter = new FileAccessEncrypted();
+			decrypter->open_and_parse_password(loader, EncryptKey, FileAccessEncrypted::MODE_READ);
+			JSON::parse(loader->get_line(), loaded, err, err_int);
+			pulled = Dictionary(loaded);
+			decrypter->close();
+			loader->close();
+		}*/
+
+		FileAccess *loader = FileAccess::open(GetSavePath(FileName), FileAccess::READ);
+		JSON::parse(loader->get_line(), loaded, err, err_int);
+		pulled = Dictionary(loaded);
+		loader->close();
+	}
+
+	return pulled;
 }
 
 void USaveWorker::DeleteGameFromSlot(String FileName) {
-	String f = FileName + ".save";
-	DirAccess* p = DirAccess::create_for_path("user://");
-	if (p->file_exists(f)) {
-		p->remove(f);
-	}
+
 }
 
-Dictionary USaveWorker::IterateSaveGameData() {
+// Iterate saves and loads
+
+Dictionary USaveWorker::MakeSaveGameRecords() {
 	Dictionary newrecords;
 
 	List<Node *> nodes = GetSaveGroup();
 	for (int i = 0; i < nodes.size(); i++)
-		IterateSaveObjectData(nodes[i], newrecords);
+		MakeNodeRecord(nodes[i], newrecords);
 
 	return newrecords;
 }
 
-void USaveWorker::IterateSaveObjectData(Node *obj, Dictionary ActorRecords) {
+void USaveWorker::MakeNodeRecord(Node *obj, Dictionary ActorRecords) {
 	obj->call("save_game"); // The node should prepare itself for saving
-	ActorRecords[obj->get_path()] = SerializeObject(obj);
+	ActorRecords[String(obj->get_path())] = SerializeNode(obj);
 }
 
-Dictionary USaveWorker::SerializeObject(Node *Obj) {
+Dictionary USaveWorker::SerializeNode(Node *Obj) {
 	Dictionary record;
 
 	// Nodes should make an array named "saves" with a list of values to save
@@ -151,7 +188,7 @@ Dictionary USaveWorker::SerializeObject(Node *Obj) {
 
 	// For each item in the save_params, hash that value into a dict
 	for (int i = 0; i < save_params.size(); i++)
-		record[save_params[i]] = Obj->get(save_params[i]);
+		record[save_params[i]] = Obj->get(save_params[i]).get_construct_string();
 
 	return record;
 }
@@ -165,8 +202,8 @@ void USaveWorker::IterateLoadGameData(Dictionary ActorRecords) {
 }
 
 void USaveWorker::IterateLoadActorObject(Node *Obj, Dictionary ActorRecords) {
-	if (ActorRecords.has(Obj->get_path())) {
-		ReadSerialObject(Obj, ActorRecords[Obj->get_path()]);
+	if (ActorRecords.has(String(Obj->get_path()))) {
+		ReadSerialObject(Obj, ActorRecords[String(Obj->get_path())]);
 		Obj->call("load_game");
 	}
 }
@@ -174,8 +211,16 @@ void USaveWorker::IterateLoadActorObject(Node *Obj, Dictionary ActorRecords) {
 void USaveWorker::ReadSerialObject(Node *Obj, Dictionary Record) {
 	Array keys = Record.keys();
 
-	for (int i = 0; i < keys.size(); i++)
-		Obj->set(keys[i], Record[keys[i]]);
+	for (int i = 0; i < keys.size(); i++) {
+		Variant val;
+		String err;
+		int err_line;
+		VariantParser::StreamString* ss = new VariantParser::StreamString();
+		ss->s = Record[keys[i]];
+		VariantParser::parse(ss, val, err, err_line);
+		Obj->set(keys[i], val);
+	}
+		
 }
 
 void USaveWorker::ResetLoadedStatus() {

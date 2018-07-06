@@ -128,26 +128,16 @@ public:
 	int get_tracked_seconds() const;
 
 protected:
-	static void _bind_methods();
+	static void _bind_methods() {
+		ClassDB::bind_method(D_METHOD("set_tracked_seconds", "seconds"), &TimeKeeper::set_tracked_seconds);
+		ClassDB::bind_method(D_METHOD("get_tracked_seconds"), &TimeKeeper::get_tracked_seconds);
+		ADD_PROPERTY(PropertyInfo(Variant::INT, "tracked_seconds"), "set_tracked_seconds", "get_tracked_seconds");
+	}
 
 private:
 	int tracked_seconds;
 };
 
-void TimeKeeper::_bind_methods() {
-
-	ClassDB::bind_method(D_METHOD("set_tracked_seconds", "seconds"), &TimeKeeper::set_tracked_seconds);
-	ClassDB::bind_method(D_METHOD("get_tracked_seconds"), &TimeKeeper::get_tracked_seconds);
-	ADD_PROPERTY(PropertyInfo(Variant::INT, "tracked_seconds"), "set_tracked_seconds", "get_tracked_seconds");
-}
-
-void TimeKeeper::set_tracked_seconds(int p_seconds) {
-	tracked_seconds = p_seconds;
-}
-
-int TimeKeeper::get_tracked_seconds() const {
-	return tracked_seconds;
-}
 
 //void TimeKeeper::_process(float delta) {
 //	tracked_seconds += delta;
