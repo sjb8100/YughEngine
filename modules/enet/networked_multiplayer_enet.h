@@ -34,6 +34,7 @@
 #include "io/compression.h"
 #include "io/networked_multiplayer_peer.h"
 
+
 #include <enet/enet.h>
 
 class NetworkedMultiplayerENet : public NetworkedMultiplayerPeer {

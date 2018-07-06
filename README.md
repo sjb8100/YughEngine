@@ -1,3 +1,11 @@
+## Godot Engine - Yugh branch
+
+The Yugh branch of the Godot engine keeps up to date with major releases of 
+the godot engine (current 3.0.4), and has additions built on top of that.
+Examples are a Discord integration, Steam integration, and so on.
+
+Usability and list of features: https://odplot.com
+
 [![Godot Engine logo](/logo.png)](https://godotengine.org)
 
 ## Godot Engine
