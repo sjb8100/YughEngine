@@ -22,7 +22,7 @@ public:
 		hours_in_day = 24;
 	};
 
-	~Damageable(){};
+	~Damageable(){ };
 
 	int seconds_in_minute;
 

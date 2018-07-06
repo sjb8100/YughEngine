@@ -3,6 +3,7 @@
 #include "dictionary.h"
 #include "object.h"
 #include "reference.h"
+#include "scene/main/node.h"
 #include "scene/resources/texture.h"
 
 // All of the net systems (Steam, Discord, etc), must inheret from this.

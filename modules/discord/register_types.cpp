@@ -7,6 +7,9 @@
 #include "interactable_toggle.h"
 #include "interactable_oneshot.h"
 #include "lock.h"
+#include "save_worker.h"
+
+static USaveWorker *SaveWorkerPtr = nullptr;
 
 void register_discord_types() {
 	// Inculde new CPP files here to "register" them with ClassDB::register_class<CLASS>();
@@ -18,6 +21,9 @@ void register_discord_types() {
 	ClassDB::register_class<InteractableOneshot>();
 	ClassDB::register_class<InteractableToggle>();
 	ClassDB::register_class<Lock>();
+
+	SaveWorkerPtr = memnew(USaveWorker);
+	Engine::get_singleton()->add_singleton(Engine::Singleton("SaveWorker", USaveWorker::get_singleton()));
 }
 
 void unregister_discord_types(){
