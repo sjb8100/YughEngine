@@ -7,129 +7,121 @@
 #include "reference.h"
 #include "scene/main/node.h"
 
-// See for implementation https://www.boost.org/doc/libs/1_62_0/doc/html/date_time/posix_time.html
-#include "boost/date_time/posix_time/posix_time.hpp"
-using namespace boost::date_time;
+// TODO: Incorporate the C++20 time library into this
+//#include <chrono>
+//#include "date/date.h"
 
 // Attach to an actor to let it keep track of time.
 class TimeKeeper : public Node {
 	GDCLASS(TimeKeeper, Node);
 
 public:
-	TimeKeeper() {
-		tracked_seconds = 0;
-		seconds_in_minute = 60;
-		minutes_in_hour = 60;
-		hours_in_day = 24;
-		current_time = ptime(date(1981, Jan, 10));
-	};
-	~TimeKeeper(){};
+	const int sec_in_min = 60;
+	const int min_in_hour = 60;
+	const int hour_in_day = 24;
 
-	ptime current_time;
+	TimeKeeper() {
+		sec = 0;
+		min = 0;
+		hour = 8;
+		day = 18;
+		month = 8;
+		year = 1973;
+
+		TimeRate = 1.0f;
+		AdvancingTime = true;
+	};
+
+	~TimeKeeper(){};
 
 	void _notification(int p_what);
 
-	int seconds_in_minute;
+	float sec;
+	int min;
+	int hour;
+	int day;
+	int month;
+	int year;
 
-	int minutes_in_hour;
+	/// At what rate do we multiply real time passage by
+	float TimeRate;
+	float GetTimeRate() const { return TimeRate; }
+	void SetTimeRate(float val) { TimeRate = val; }
 
-	int hours_in_day;
+	/// True if we should count time up
+	bool AdvancingTime;
+	bool GetAdvancingTime() const { return AdvancingTime; }
+	void SetAdvancingTime(bool val) { AdvancingTime = val; }
 
-	int current_year;
+	void normalize();
 
-	int current_month;
+	void AddTime(Dictionary AddTime);
 
-	int current_day;
+	void SetTime(Dictionary Time);
 
-	//void RectifyTime() {
-	//	if (TrackedTime.GetSeconds() > TimeScales.SecondsInMinute) {
-	//		TrackedTime += FTimespan().FromMinutes(1);
+	Dictionary GetTime() {
+		Dictionary time;
 
-	//		TrackedTime -= FTimespan().FromSeconds(TimeScales.SecondsInMinute);
+		time["sec"] = sec;
+		time["min"] = min;
+		time["hour"] = hour;
+		time["day"] = day;
+		time["month"] = month;
+		time["year"] = year;
 
-	//		if (TrackedTime.GetMinutes() >= TimeScales.MinutesInHour) {
-	//			TrackedTime += FTimespan().FromHours(1);
+		return time;
+	}
 
-	//			TrackedTime -= FTimespan().FromMinutes(TimeScales.MinutesInHour);
+	bool IsMorning() {
+		return hour < 12;
+	}
 
-	//			if (TrackedTime.GetHours() >= TimeScales.HoursInDay) {
-	//				TrackedTime += FTimespan().FromDays(1);
+	float GetMinuteHandRotation() {
+		return ((float)min / min_in_hour) * 360.f;
+	}
 
-	//				TrackedTime -= FTimespan().FromHours(TimeScales.HoursInDay);
-	//			}
-	//		}
-	//	}
-	//}
+	float GetHourHandRotation() {
+		return ((float)hour / hour_in_day) * 360.f;
+	}
 
-	//void GetSeconds() {
-	//}
+	bool IsAfterTime(int _hour) {
+		return _hour > hour;
+	}
 
-	//float GetMinuteHandRotation() {
-	//	return ((float)TrackedTime.GetMinutes() / TimeScales.MinutesInHour) * 360.f;
-	//}
+	int GetHour(bool Is12Hour) {
+		if (hour == 0 || hour == 12)
+			return 12;
 
-	//float GetHourHandRotation(bool Is12Hour) {
-	//	if (Is12Hour)
-	//		return (TrackedTime.GetHours() / (TimeScales.HoursInDay / 2)) * 360.f;
-	//	else
-	//		return (TrackedTime.GetHours() / TimeScales.HoursInDay) * 360.f;
-	//}
+		if (!Is12Hour)
+			return hour;
+		else
+			return hour % 12;
+	}
 
-	//bool IsAfterTime(FTimespan CheckTime) {
-	//	return TrackedTime > CheckTime;
-	//}
-
-	//int GetHour(bool Is12Hour) {
-	//	if (TrackedTime.GetHours() == 0 || TrackedTime.GetHours() == 12)
-	//		return 12;
-
-	//	if (!Is12Hour)
-	//		return TrackedTime.GetHours();
-	//	else
-	//		return TrackedTime.GetHours() % 12;
-	//}
-
-	//FString GetFormattedTime() {
-	//	return FString::FromInt(GetHour(true)) + TEXT(":") + FString::FromInt(TrackedTime.GetMinutes());
-	//}
-	//// Sets default values for this component's properties
-	//UTimeKeeperComponent();
-
-	//// Defined variables
-	//bool AdvancingTime; // True if we should count time up
-
-	//float TimeRate; // At what rate do we multiply real time passage by
-
-	//FGameTime CurrentTime;
-
-	//void AddTime(FTimespan AddTime);
-
-	//void SetAdvancingTime(bool advancing);
-
-	//void SetTimeRate(float newRate);
-
-	//float GetMinuteHandRotation();
-
-	//float GetHourHandRotation(bool Is12Hour);
-
-	//bool IsAtleastTime(FTimespan CheckTime);
-
-	//FString GetDigitalFormattedTime(bool Is12Hour);
-
-	//bool IsMorning();
-
-	//float GetCurrentHour(bool Truncated);
-
-	void set_tracked_seconds(int p_seconds);
-	int get_tracked_seconds() const;
+	String GetFormattedTime(bool Is12Hour) {
+		return String(Variant(GetHour(Is12Hour))) + ":" + String(Variant(min));
+	}
 
 protected:
 	static void _bind_methods() {
-		ClassDB::bind_method(D_METHOD("set_tracked_seconds", "seconds"), &TimeKeeper::set_tracked_seconds);
-		ClassDB::bind_method(D_METHOD("get_tracked_seconds"), &TimeKeeper::get_tracked_seconds);
-		ADD_PROPERTY(PropertyInfo(Variant::INT, "tracked_seconds"), "set_tracked_seconds", "get_tracked_seconds");
-	}
 
-private:
-	int tracked_seconds;
+		ClassDB::bind_method("get_time_rate", &TimeKeeper::GetTimeRate);
+		ClassDB::bind_method(D_METHOD("set_time_rate", "time_rate"), &TimeKeeper::SetTimeRate);
+		ADD_PROPERTY(PropertyInfo(Variant::REAL, "time_rate"), "set_time_rate", "get_time_rate");
+
+		ClassDB::bind_method("get_advancing_time", &TimeKeeper::GetAdvancingTime);
+		ClassDB::bind_method(D_METHOD("set_advancing_time", "advancing_time"), &TimeKeeper::SetAdvancingTime);
+		ADD_PROPERTY(PropertyInfo(Variant::BOOL, "advancing_time"), "set_advancing_time", "get_advancing_time");
+
+		ClassDB::bind_method("get_time", &TimeKeeper::GetTime);
+		ClassDB::bind_method("get_minute_hand_rotation", &TimeKeeper::GetMinuteHandRotation);
+		ClassDB::bind_method("get_hour_hand_rotation", &TimeKeeper::GetHourHandRotation);
+		ClassDB::bind_method(D_METHOD("get_hour", "12_hour"), &TimeKeeper::GetHour);
+		ClassDB::bind_method(D_METHOD("get_digital_formatted", "12_hour"), &TimeKeeper::GetHour);
+		ClassDB::bind_method("is_morning", &TimeKeeper::IsMorning);
+
+		// Signals useful to keep the UI updated
+		ADD_SIGNAL(MethodInfo("minute_changed"));
+		ADD_SIGNAL(MethodInfo("hour_changed"));
+	}
 };

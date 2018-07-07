@@ -21,6 +21,7 @@ void register_discord_types() {
 	ClassDB::register_class<InteractableToggle>();
 	ClassDB::register_class<Lock>();
 	ClassDB::register_class<Yughalogue>();
+	ClassDB::register_class<TimeKeeper>();
 
 	SaveWorkerPtr = memnew(USaveWorker);
 	Engine::get_singleton()->add_singleton(Engine::Singleton("SaveWorker", USaveWorker::get_singleton()));

@@ -2,85 +2,57 @@
 
 #include "timekeeper.h"
 
-//// Sets default values for this component's properties
-//UTimeKeeperComponent::UTimeKeeperComponent() {
-//	TimeRate = 1.0f;
-//	AdvancingTime = true;
-//}
-//
-//void UTimeKeeperComponent::SetAdvancingTime(bool advancing) {
-//	AdvancingTime = advancing;
-//}
-//
-//void UTimeKeeperComponent::SetTimeRate(float newRate) {
-//	TimeRate = newRate;
-//}
-//
-//float UTimeKeeperComponent::GetMinuteHandRotation() {
-//	return CurrentTime.GetMinuteHandRotation();
-//}
-//
-//float UTimeKeeperComponent::GetHourHandRotation(bool Is12Hour) {
-//	return CurrentTime.GetHourHandRotation(Is12Hour);
-//}
-//
-//bool UTimeKeeperComponent::IsAtleastTime(FTimespan CheckTime) {
-//	return CurrentTime.IsAfterTime(CheckTime);
-//}
-//
-//void UTimeKeeperComponent::AddTime(FTimespan AddTime) {
-//	CurrentTime.AddTime(AddTime);
-//}
-//
-//FString UTimeKeeperComponent::GetDigitalFormattedTime(bool Is12Hour) {
-//	FString MinuteString;
-//
-//	if (CurrentTime.TrackedTime.GetMinutes() < 10)
-//		MinuteString = FString(TEXT("0")) + FString::FromInt(CurrentTime.TrackedTime.GetMinutes());
-//	else
-//		MinuteString = FString::FromInt(CurrentTime.TrackedTime.GetMinutes());
-//
-//	FString HourString;
-//
-//	if (CurrentTime.GetHour(Is12Hour) < 10)
-//		HourString = FString(TEXT(" ")) + FString::FromInt(CurrentTime.GetHour(Is12Hour));
-//	else
-//		HourString = FString::FromInt(CurrentTime.GetHour(Is12Hour));
-//
-//	return HourString + FString(TEXT(":")) + MinuteString;
-//}
-//
-//bool UTimeKeeperComponent::IsMorning() {
-//	if (CurrentTime.TrackedTime.GetHours() < 12)
-//		return true;
-//	else
-//		return false;
-//}
-//
-//float UTimeKeeperComponent::GetCurrentHour(bool Truncated) {
-//	if (Truncated)
-//		return CurrentTime.TrackedTime.GetHours();
-//	else
-//		return CurrentTime.TrackedTime.GetHours() + (float)CurrentTime.TrackedTime.GetMinutes() / CurrentTime.TimeScales.MinutesInHour;
-//}
-
 void TimeKeeper::_notification(int p_what) {
 	switch (p_what) {
 
 		case NOTIFICATION_PROCESS:
-
-			if (AdvancingTime)
-				d += seconds(5);
-				//CurrentTime.AdvanceTime(DeltaTime * TimeRate);
+			
+			if (AdvancingTime) {
+				sec += get_process_delta_time() * TimeRate;
+				normalize();
+			}
 
 			break;
 	}
 }
 
-void TimeKeeper::set_tracked_seconds(int p_seconds) {
-	tracked_seconds = p_seconds;
+inline void TimeKeeper::normalize() {
+	if (sec > sec_in_min) {
+		min++;
+		sec -= sec_in_min;
+		emit_signal("minute_changed");
+
+		if (min >= min_in_hour) {
+			hour++;
+			min -= min_in_hour;
+			emit_signal("hour_changed");
+
+			if (hour >= hour_in_day) {
+				day++;
+				hour -= hour_in_day;
+			}
+		}
+	}
 }
 
-int TimeKeeper::get_tracked_seconds() const {
-	return tracked_seconds;
+inline void TimeKeeper::AddTime(Dictionary AddTime) {
+	sec += (float)AddTime["sec"];
+	min += (int)AddTime["min"];
+	hour += (int)AddTime["hour"];
+	day += (int)AddTime["day"];
+	month += (int)AddTime["month"];
+	year += (int)AddTime["year"];
+
+	normalize();
+}
+
+inline void TimeKeeper::SetTime(Dictionary Time) {
+	sec = Time["sec"];
+	min = Time["min"];
+	hour = Time["hour"];
+	day = Time["day"];
+	month = Time["month"];
+	year = Time["year"];
+
+	normalize();
 }
