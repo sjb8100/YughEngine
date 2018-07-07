@@ -28,15 +28,20 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#ifndef VARIANT_PARSER_H
-#define VARIANT_PARSER_H
+#pragma once
 
 #include "os/file_access.h"
 #include "resource.h"
 #include "variant.h"
 
+//////////////////////////////////////////////////////////////////////////
+/// Used to parse Strings into Variants. Especially useful for handling
+/// the serialization of data to and from JSON.
+//////////////////////////////////////////////////////////////////////////
+
 class VariantParser {
 public:
+	/// Stream used as input to parse into Variant data
 	struct Stream {
 
 		virtual CharType get_char() = 0;
@@ -49,6 +54,7 @@ public:
 		virtual ~Stream() {}
 	};
 
+	/// Stream composed of a FileAccess
 	struct StreamFile : public Stream {
 
 		FileAccess *f;
@@ -60,6 +66,7 @@ public:
 		StreamFile() { f = NULL; }
 	};
 
+	/// Stream composed of a String
 	struct StreamString : public Stream {
 
 		String s;
@@ -138,9 +145,17 @@ public:
 
 	static Error parse_value(Token &token, Variant &value, Stream *p_stream, int &line, String &r_err_str, ResourceParser *p_res_parser = NULL);
 	static Error get_token(Stream *p_stream, Token &r_token, int &line, String &r_err_str);
+
+	/// Parses a Stream into the Variant it represents.
+	/// @param[in] p_stream The stream to parse
+	/// @param[out] r_ret The variant to fill with the Stream's data
+	/// @param[out] r_err_str Descriptive error if one was encountered
+	/// @param[out] r_err_line The line the error occured at
+	/// @param p_res_parser Not sure what this is?
 	static Error parse(Stream *p_stream, Variant &r_ret, String &r_err_str, int &r_err_line, ResourceParser *p_res_parser = NULL);
 };
 
+/// The actual class that implements the writing of the strings.
 class VariantWriter {
 public:
 	typedef Error (*StoreStringFunc)(void *ud, const String &p_string);
@@ -149,5 +164,3 @@ public:
 	static Error write(const Variant &p_variant, StoreStringFunc p_store_string_func, void *p_store_string_ud, EncodeResourceFunc p_encode_res_func, void *p_encode_res_ud);
 	static Error write_to_string(const Variant &p_variant, String &r_string, EncodeResourceFunc p_encode_res_func = NULL, void *p_encode_res_ud = NULL);
 };
-
-#endif // VARIANT_PARSER_H

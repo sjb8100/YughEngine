@@ -27,11 +27,14 @@ void Interactable::_notification(int p_what) {
 
 	switch (p_what) {
 
-		case NOTIFICATION_PROCESS: {
+		case NOTIFICATION_PROCESS:
+
 			float DeltaTime = get_process_delta_time();
 
 			switch (InteractType) {
+
 				case InteractMethod::INTERACT_METHOD_HOLD:
+
 					if (IsHolding) {
 						HoldTime = HoldTime + DeltaTime * RevSpeed;
 
@@ -67,7 +70,7 @@ void Interactable::_notification(int p_what) {
 					break;
 			}
 
-		} break;
+			break;
 
 	}
 }

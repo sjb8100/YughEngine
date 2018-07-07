@@ -7,8 +7,9 @@
 #include "reference.h"
 #include "scene/main/node.h"
 
-// TODO: Not integrating boost libraries right now to keep it simple, but should later
-//#include "boost/date_time/gregorian/gregorian_types.hpp"
+// See for implementation https://www.boost.org/doc/libs/1_62_0/doc/html/date_time/posix_time.html
+#include "boost/date_time/posix_time/posix_time.hpp"
+using namespace boost::date_time;
 
 // Attach to an actor to let it keep track of time.
 class TimeKeeper : public Node {
@@ -20,8 +21,13 @@ public:
 		seconds_in_minute = 60;
 		minutes_in_hour = 60;
 		hours_in_day = 24;
+		current_time = ptime(date(1981, Jan, 10));
 	};
 	~TimeKeeper(){};
+
+	ptime current_time;
+
+	void _notification(int p_what);
 
 	int seconds_in_minute;
 
@@ -35,96 +41,86 @@ public:
 
 	int current_day;
 
-			//virtual _process(float delta) override;
+	//void RectifyTime() {
+	//	if (TrackedTime.GetSeconds() > TimeScales.SecondsInMinute) {
+	//		TrackedTime += FTimespan().FromMinutes(1);
 
-			/*void RectifyTime() {
-		if (TrackedTime.GetSeconds() > TimeScales.SecondsInMinute) {
-			TrackedTime += FTimespan().FromMinutes(1);
+	//		TrackedTime -= FTimespan().FromSeconds(TimeScales.SecondsInMinute);
 
-			TrackedTime -= FTimespan().FromSeconds(TimeScales.SecondsInMinute);
+	//		if (TrackedTime.GetMinutes() >= TimeScales.MinutesInHour) {
+	//			TrackedTime += FTimespan().FromHours(1);
 
-			if (TrackedTime.GetMinutes() >= TimeScales.MinutesInHour) {
-				TrackedTime += FTimespan().FromHours(1);
+	//			TrackedTime -= FTimespan().FromMinutes(TimeScales.MinutesInHour);
 
-				TrackedTime -= FTimespan().FromMinutes(TimeScales.MinutesInHour);
+	//			if (TrackedTime.GetHours() >= TimeScales.HoursInDay) {
+	//				TrackedTime += FTimespan().FromDays(1);
 
-				if (TrackedTime.GetHours() >= TimeScales.HoursInDay) {
-					TrackedTime += FTimespan().FromDays(1);
+	//				TrackedTime -= FTimespan().FromHours(TimeScales.HoursInDay);
+	//			}
+	//		}
+	//	}
+	//}
 
-					TrackedTime -= FTimespan().FromHours(TimeScales.HoursInDay);
-				}
-			}
-		}
-	}
+	//void GetSeconds() {
+	//}
 
-	void GetSeconds() {
+	//float GetMinuteHandRotation() {
+	//	return ((float)TrackedTime.GetMinutes() / TimeScales.MinutesInHour) * 360.f;
+	//}
 
-	}
+	//float GetHourHandRotation(bool Is12Hour) {
+	//	if (Is12Hour)
+	//		return (TrackedTime.GetHours() / (TimeScales.HoursInDay / 2)) * 360.f;
+	//	else
+	//		return (TrackedTime.GetHours() / TimeScales.HoursInDay) * 360.f;
+	//}
 
-	float GetMinuteHandRotation() {
-		return ((float)TrackedTime.GetMinutes() / TimeScales.MinutesInHour) * 360.f;
-	}
+	//bool IsAfterTime(FTimespan CheckTime) {
+	//	return TrackedTime > CheckTime;
+	//}
 
-	float GetHourHandRotation(bool Is12Hour) {
-		if (Is12Hour)
-			return (TrackedTime.GetHours() / (TimeScales.HoursInDay / 2)) * 360.f;
-		else
-			return (TrackedTime.GetHours() / TimeScales.HoursInDay) * 360.f;
-	}
+	//int GetHour(bool Is12Hour) {
+	//	if (TrackedTime.GetHours() == 0 || TrackedTime.GetHours() == 12)
+	//		return 12;
 
-	bool IsAfterTime(FTimespan CheckTime) {
-		return TrackedTime > CheckTime;
-	}
+	//	if (!Is12Hour)
+	//		return TrackedTime.GetHours();
+	//	else
+	//		return TrackedTime.GetHours() % 12;
+	//}
 
-	int GetHour(bool Is12Hour) {
-		if (TrackedTime.GetHours() == 0 || TrackedTime.GetHours() == 12)
-			return 12;
+	//FString GetFormattedTime() {
+	//	return FString::FromInt(GetHour(true)) + TEXT(":") + FString::FromInt(TrackedTime.GetMinutes());
+	//}
+	//// Sets default values for this component's properties
+	//UTimeKeeperComponent();
 
-		if (!Is12Hour)
-			return TrackedTime.GetHours();
-		else
-			return TrackedTime.GetHours() % 12;
-	}*/
+	//// Defined variables
+	//bool AdvancingTime; // True if we should count time up
 
-			//FString GetFormattedTime() {
-			//	return FString::FromInt(GetHour(true)) + TEXT(":") + FString::FromInt(TrackedTime.GetMinutes());
-			//}
-			//// Sets default values for this component's properties
-			//UTimeKeeperComponent();
+	//float TimeRate; // At what rate do we multiply real time passage by
 
-			//// Called when the game starts
-			//virtual void BeginPlay() override;
+	//FGameTime CurrentTime;
 
-			//// Called every frame
-			//virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction) override;
+	//void AddTime(FTimespan AddTime);
 
-			//// Defined variables
-			//bool AdvancingTime; // True if we should count time up
+	//void SetAdvancingTime(bool advancing);
 
-			//float TimeRate; // At what rate do we multiply real time passage by
+	//void SetTimeRate(float newRate);
 
-			//FGameTime CurrentTime;
+	//float GetMinuteHandRotation();
 
-			//void AddTime(FTimespan AddTime);
+	//float GetHourHandRotation(bool Is12Hour);
 
-			//void SetAdvancingTime(bool advancing);
+	//bool IsAtleastTime(FTimespan CheckTime);
 
-			//void SetTimeRate(float newRate);
+	//FString GetDigitalFormattedTime(bool Is12Hour);
 
-			//float GetMinuteHandRotation();
+	//bool IsMorning();
 
-			//float GetHourHandRotation(bool Is12Hour);
+	//float GetCurrentHour(bool Truncated);
 
-			//bool IsAtleastTime(FTimespan CheckTime);
-
-			//FString GetDigitalFormattedTime(bool Is12Hour);
-
-			//bool IsMorning();
-
-			//float GetCurrentHour(bool Truncated);
-
-			void
-			set_tracked_seconds(int p_seconds);
+	void set_tracked_seconds(int p_seconds);
 	int get_tracked_seconds() const;
 
 protected:
@@ -137,8 +133,3 @@ protected:
 private:
 	int tracked_seconds;
 };
-
-
-//void TimeKeeper::_process(float delta) {
-//	tracked_seconds += delta;
-//}

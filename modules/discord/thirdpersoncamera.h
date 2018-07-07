@@ -11,7 +11,7 @@
 // TODO: Not integrating boost libraries right now to keep it simple, but should later
 //#include "boost/date_time/gregorian/gregorian_types.hpp"
 
-// Attach to an actor to let it keep track of time.
+/// Attach to an actor to let it keep track of time.
 class thirdpersoncamera : public Spatial {
 	GDCLASS(thirdpersoncamera, Spatial);
 
@@ -40,7 +40,7 @@ public:
 	thirdpersoncamera();
 	~thirdpersoncamera() { }
 
-	void Tick(float DeltaSeconds);
+	void _notification(int p_what);
 
 	// An actor that can be given for the camera to base its movement around
 	// instead of itself. Makes most sense for this to be stationary
@@ -60,27 +60,27 @@ public:
 	// at the target, it only moves around the world.
 	///////////////////////////////////////////////////////////////////////////
 
-	// "Posts" for each direction in 3D space. These are items that the target
-	// is allowed to move within without the camera following along.
+	/// "Posts" for each direction in 3D space. These are items that the target
+	/// is allowed to move within without the camera following along.
 	bool XDirPosts;
 	bool YDirPosts;
 	bool ZDirPosts;
 
-	// The range in ecah direction the camera floats. While within this range,
-	// the camera will smoothly glide to the desired position.
+	/// The range in ecah direction the camera floats. While within this range,
+	/// the camera will smoothly glide to the desired position.
 	Vector3 FloatWidths;
 
-	// The clamp range for each direction. If the camera reaches this range,
-	// it will stick and not move any further.
+	/// The clamp range for each direction. If the camera reaches this range,
+	/// it will stick and not move any further.
 	Vector3 AnchorWidths;
 
-	// A scaling factor for translating the camera
+	/// A scaling factor for translating the camera
 	Vector3 TranslationScales;
 
-	// Offset for where to make calculations from the center of the camera.
+	/// Offset for where to make calculations from the center of the camera.
 	Vector3 CenterVector;
 
-	// When floating to the target, the speed to float.
+	/// When floating to the target, the speed to float.
 	Vector3 PositionSpeeds;
 
 	//////////////////////////////////////////////////////////////////////////
@@ -88,25 +88,25 @@ public:
 	// follows the Target without translating.
 	//////////////////////////////////////////////////////////////////////////
 
-	// Variables to lock its rotation in any of the three directions
+	/// Variables to lock its rotation in any of the three directions
 	bool LockRoll;
 	bool LockPitch;
 	bool LockYaw;
 
 	Quat RotationOffset;
 
-	// The speed of rotation
+	/// The speed of rotation
 	float RotationSpeed;
 
 private:
 	// Fill in ..
 	void CalculateTargetOffset();
 
-	// Returns the correct frame of reference for the camera's settings
-	// @return The AActor to use
+	/// Returns the correct frame of reference for the camera's settings
+	/// @return The Spatial node to use
 	Spatial *GetFrameOfReference();
 
-	// The calculated offset based on frames of reference
+	/// The calculated offset based on frames of reference
 	Vector3 TargetOffset;
 	
 	Vector3 TargetPosition;
@@ -123,10 +123,10 @@ private:
 	
 	Vector3 CalculateCenter();
 
-	// Given a direction and width, find the offets.
+	/// Given a direction and width, find the offets.
 	Vector3 GetPostsOffset(const Vector3 &DirectionVector, float AnchorWidth);
 
-	// Given anchors, what's the anchor width?
+	/// Given anchors, what's the anchor width?
 	Vector3 GetExtentsOffset(const Vector3 &DirectionVector, float AnchorWidth, float TOffset, float Width);
 
 	Quat RemoveLockedRotation(const Quat &CurrentRotation);
@@ -137,10 +137,24 @@ private:
 
 	bool GetLerpParam(const float Offst, const float AnchorWidth, const float FloatWidth);
 
-	// Set to a value that gives good clamping, smoothly. Activates when
-	// the target is out of range.
+	/// Set to a value that gives good clamping, smoothly. Activates when
+	/// the target is out of range.
 	float AnchorSpeed;
 
 protected:
-	static void _bind_methods();
+	static void _bind_methods() {
+		BIND_ENUM_CONSTANT(STATIONARY);
+		BIND_ENUM_CONSTANT(TRANSLATING);
+		BIND_ENUM_CONSTANT(ROTATING);
+		BIND_ENUM_CONSTANT(SPLINE);
+
+		BIND_ENUM_CONSTANT(NONE);
+		BIND_ENUM_CONSTANT(CROSSDISSOLVE);
+		BIND_ENUM_CONSTANT(WIPE);
+		BIND_ENUM_CONSTANT(DIP);
+
+		BIND_ENUM_CONSTANT(LOCAL);
+		BIND_ENUM_CONSTANT(WORLD);
+		BIND_ENUM_CONSTANT(EXTERNAL);
+	}
 };

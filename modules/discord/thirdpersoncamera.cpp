@@ -1,7 +1,7 @@
 // odplot productions is a trademarked name. Project Yugh is a copyrighted property. This code, however, is free to be copy and extended as you see fit.
 
-#include "thirdpersoncamera.h"
 #include "core/math/math_funcs.h"
+#include "thirdpersoncamera.h"
 
 thirdpersoncamera::thirdpersoncamera() {
 
@@ -23,22 +23,30 @@ thirdpersoncamera::thirdpersoncamera() {
 	AnchorSpeed = 80;
 }
 
-// TODO: Figure out what this is supposed to actually be to tick
-void thirdpersoncamera::Tick(float DeltaTime) {
-	TargetPosition = CalculatePosition();
+void thirdpersoncamera::_notification(int p_what) {
 
-	// I don't see the use of centervector here. Only used here ... as well as translationscales
-	// TODO: Commenting out for now.
-	//Vector3 ToPosition = CenterVector + ((TargetPosition - CenterVector) * TranslationScales);
+	switch (p_what) {
+		case NOTIFICATION_PROCESS:
 
-	// For translation
-	this->set_translation(FrameBasedVectorLerp(this->get_translation(), TargetPosition, PositionSpeeds, DeltaTime));
+			TargetPosition = CalculatePosition();
 
-	// For rotation
-	// TODO: Add rotation offset in properly
-	//this->SetActorRotation(FMath::Lerp(this->GetActorRotation(), TargetRotation, RotationSpeed * DeltaTime));
-	//this->set_rotation(Quat(this->get_rotation().slerp(RotationOffset, RotationSpeed * DeltaTime)).get_euler());
-	this->set_rotation(this->get_rotation().slerp(RotationOffset.get_euler(), RotationSpeed * DeltaTime));
+			// I don't see the use of centervector here. Only used here ... as well as translationscales
+			// TODO: Commenting out for now.
+			//Vector3 ToPosition = CenterVector + ((TargetPosition - CenterVector) * TranslationScales);
+
+			float DeltaTime = get_process_delta_time();
+
+			// For translation
+			this->set_translation(FrameBasedVectorLerp(this->get_translation(), TargetPosition, PositionSpeeds, DeltaTime));
+
+			// For rotation
+			// TODO: Add rotation offset in properly
+			//this->SetActorRotation(FMath::Lerp(this->GetActorRotation(), TargetRotation, RotationSpeed * DeltaTime));
+			//this->set_rotation(Quat(this->get_rotation().slerp(RotationOffset, RotationSpeed * DeltaTime)).get_euler());
+			this->set_rotation(this->get_rotation().slerp(RotationOffset.get_euler(), RotationSpeed * DeltaTime));
+
+			break;
+	}
 }
 
 void thirdpersoncamera::CalculateTargetOffset() {
@@ -156,20 +164,4 @@ Vector3 thirdpersoncamera::LerpVector(const Vector3 &From, const Vector3 &To, co
 
 bool thirdpersoncamera::GetLerpParam(const float Offst, const float AnchorWidth, const float FloatWidth) {
 	return (Offst > (AnchorWidth + FloatWidth)) && !Math::is_equal_approx(AnchorWidth + FloatWidth, Offst);
-}
-
-void thirdpersoncamera::_bind_methods() {
-	BIND_ENUM_CONSTANT(STATIONARY);
-	BIND_ENUM_CONSTANT(TRANSLATING);
-	BIND_ENUM_CONSTANT(ROTATING);
-	BIND_ENUM_CONSTANT(SPLINE);
-
-	BIND_ENUM_CONSTANT(NONE);
-	BIND_ENUM_CONSTANT(CROSSDISSOLVE);
-	BIND_ENUM_CONSTANT(WIPE);
-	BIND_ENUM_CONSTANT(DIP);
-
-	BIND_ENUM_CONSTANT(LOCAL);
-	BIND_ENUM_CONSTANT(WORLD);
-	BIND_ENUM_CONSTANT(EXTERNAL);
 }

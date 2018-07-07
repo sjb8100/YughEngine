@@ -4,28 +4,8 @@
 
 //// Sets default values for this component's properties
 //UTimeKeeperComponent::UTimeKeeperComponent() {
-//	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
-//	// off to improve performance if you don't need them.
-//	PrimaryComponentTick.bCanEverTick = true;
-//
 //	TimeRate = 1.0f;
 //	AdvancingTime = true;
-//}
-//
-//// Called when the game starts
-//void UTimeKeeperComponent::BeginPlay() {
-//	Super::BeginPlay();
-//
-//	// ...
-//}
-//
-//// Called every frame
-//void UTimeKeeperComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction) {
-//	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-//
-//	if (AdvancingTime) {
-//		CurrentTime.AdvanceTime(DeltaTime * TimeRate);
-//	}
 //}
 //
 //void UTimeKeeperComponent::SetAdvancingTime(bool advancing) {
@@ -83,6 +63,19 @@
 //	else
 //		return CurrentTime.TrackedTime.GetHours() + (float)CurrentTime.TrackedTime.GetMinutes() / CurrentTime.TimeScales.MinutesInHour;
 //}
+
+void TimeKeeper::_notification(int p_what) {
+	switch (p_what) {
+
+		case NOTIFICATION_PROCESS:
+
+			if (AdvancingTime)
+				d += seconds(5);
+				//CurrentTime.AdvanceTime(DeltaTime * TimeRate);
+
+			break;
+	}
+}
 
 void TimeKeeper::set_tracked_seconds(int p_seconds) {
 	tracked_seconds = p_seconds;

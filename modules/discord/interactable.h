@@ -24,13 +24,13 @@
 //};
 
 //////////////////////////////////////////////////////////////////////////
-// This component should be attached to any object that wants the ability
-// to be interacted with. The object should implement the functions that it
-// wants - OnInteract, OnStopInteract, and so on, to define behavior.
-// Additionally, it supplies standard interaction stuff, like animations and
-// audio cues.
-//
-// One InteractableComponent per action.
+/// This component should be attached to any object that wants the ability
+/// to be interacted with. The object should implement the functions that it
+/// wants - OnInteract, OnStopInteract, and so on, to define behavior.
+/// Additionally, it supplies standard interaction stuff, like animations and
+/// audio cues.
+///
+/// One InteractableComponent per action.
 //////////////////////////////////////////////////////////////////////////
 
 class Interactable : public Node {
@@ -95,7 +95,7 @@ public:
 	void ApplyAnimAndAudio(Ref<Animation> NewAnim, Ref<AudioStream> NewSound);
 
 	//////////////////////////////////////////////////////////////////////////
-	// Nulled variables
+	/// Nulled variables
 	//////////////////////////////////////////////////////////////////////////
 
 	Ref<Animation> NulledAnim;
@@ -107,18 +107,18 @@ public:
 	void SetNulledSound(Ref<AudioStream> val) { NulledSound = val; }
 
 	//////////////////////////////////////////////////////////////////////////
-	// Tapping variables
+	/// Tapping variables
 	//////////////////////////////////////////////////////////////////////////
 
-	// The current number of taps that have happened
+	/// The current number of taps that have happened
 	float TapAmount;
 
-	// The number of taps that must be done to activate the interaction event
+	/// The number of taps that must be done to activate the interaction event
 	float TapCap;
 	float GetTapCap() const { return TapCap; }
 	void SetTapCap(float val) { TapCap = val; }
 
-	// The speed at which the tapped amount degrades per second
+	/// The speed at which the tapped amount degrades per second
 	float TapDeg;
 	float GetTapDeg() const { return TapDeg; }
 	void SetTapDeg(float val) { TapDeg = val; }
@@ -163,16 +163,18 @@ public:
 
 	void FinishAnimation();
 
-	// Called before the interaction goes
+	/// Called before the interaction goes
+	/// @param Interactor The Node which has interacted with this interactable.
 	void PreInteract(Node *Interactor);
 
-	// Broadcasts the interact and sets triggers
+	/// Broadcasts the interact and sets triggers
+	/// @param SilentExec True if this shouldn't play relative animations and sounds.
 	virtual void ExecInteract(bool SilentExec);
 
-	// Call this to ignore all checks and just do the interaction
+	/// Call this to ignore all checks and just do the interaction
 	virtual void ShortCircuitInteract();
 
-	// Called when the whole interaction is done
+	/// Called when the whole interaction is done
 	void FinishInteract();
 
 	bool GetCanInteract();
